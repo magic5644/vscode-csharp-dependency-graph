@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import { findCsprojFiles } from './csprojFinder';
 import { parseCsprojFiles } from './csprojParser';
 import { generateDotFile } from './graphGenerator';
+import { findCSharpSourceFiles } from './csharpSourceFinder';
+import { parseClassDependencies } from './csharpClassParser';
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
@@ -16,6 +18,28 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage('No workspace folder open');
           return;
         }
+
+        // Get configuration settings
+        const config = vscode.workspace.getConfiguration('csharpDependencyGraph');
+        const includeNetVersion = config.get<boolean>('includeNetVersion', true);
+        const excludeTestProjects = config.get<boolean>('excludeTestProjects', true);
+        const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
+        const includeClassDependencies = config.get<boolean>('includeClassDependencies', false);
+
+        // Demander le type de graphe à générer
+        const graphType = await vscode.window.showQuickPick(
+          [
+            { label: 'Project Dependencies', description: 'Generate graph with project-level dependencies' },
+            { label: 'Class Dependencies', description: 'Generate detailed graph with class-level dependencies' }
+          ],
+          { placeHolder: 'Select the type of dependency graph to generate' }
+        );
+
+        if (!graphType) {
+          return; // User cancelled
+        }
+
+        const generateClassGraph = graphType.label === 'Class Dependencies';
 
         // Ask the user for a file path to save the graph
         const defaultPath = path.join(workspaceFolder.uri.fsPath, 'dependency-graph.dot');
@@ -39,12 +63,6 @@ export function activate(context: vscode.ExtensionContext) {
             cancellable: false
           },
           async (progress) => {
-            // Get configuration settings
-            const config = vscode.workspace.getConfiguration('csharpDependencyGraph');
-            const includeNetVersion = config.get<boolean>('includeNetVersion', true);
-            const excludeTestProjects = config.get<boolean>('excludeTestProjects', true);
-            const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
-
             // Find all .csproj files
             progress.report({ message: 'Finding .csproj files...' });
             const csprojFiles = await findCsprojFiles(
@@ -61,9 +79,61 @@ export function activate(context: vscode.ExtensionContext) {
             progress.report({ message: 'Parsing .csproj files...' });
             const projects = await parseCsprojFiles(csprojFiles);
 
-            // Generate the DOT file
-            progress.report({ message: 'Generating .dot file...' });
-            const dotContent = generateDotFile(projects, includeNetVersion);
+            let dotContent: string;
+            
+            if (generateClassGraph) {
+              try {
+                // Récupérer les patterns d'exclusion de fichiers source
+                const excludeSourcePatterns = config.get<string[]>(
+                  'excludeSourcePatterns', 
+                  ["**/obj/**", "**/bin/**", "**/Generated/**", "**/node_modules/**"]
+                );
+                
+                // Find C# source files and parse class dependencies
+                progress.report({ message: 'Finding C# source files...' });
+                const projectSourceFiles = await findCSharpSourceFiles(csprojFiles, excludeSourcePatterns);
+                
+                // Vérifier qu'on a trouvé des fichiers source
+                const totalSourceFiles = Array.from(projectSourceFiles.values())
+                  .reduce((sum, files) => sum + files.length, 0);
+                  
+                if (totalSourceFiles === 0) {
+                  throw new Error('No C# source files found in the projects');
+                }
+                
+                progress.report({ message: `Analyzing class dependencies in ${totalSourceFiles} files...` });
+                const classDependencies = await parseClassDependencies(projectSourceFiles);
+                
+                if (classDependencies.length === 0) {
+                  throw new Error('No classes found in the source files');
+                }
+                
+                // Generate the DOT file with class dependencies
+                progress.report({ message: `Generating .dot file with ${classDependencies.length} classes...` });
+                dotContent = generateDotFile(projects, {
+                  includeNetVersion,
+                  includeClassDependencies: true
+                }, classDependencies);
+                
+                // Log pour le débogage
+                console.log(`Generated graph with ${classDependencies.length} classes and their dependencies`);
+              } catch (error) {
+                console.error('Erreur lors de l\'analyse des classes:', error);
+                // Fallback to project-level graph if class analysis fails
+                progress.report({ message: 'Class analysis failed, generating project-level graph instead...' });
+                dotContent = generateDotFile(projects, {
+                  includeNetVersion, 
+                  includeClassDependencies: false
+                });
+              }
+            } else {
+              // Generate the DOT file with project dependencies only
+              progress.report({ message: 'Generating .dot file with project dependencies...' });
+              dotContent = generateDotFile(projects, {
+                includeNetVersion,
+                includeClassDependencies: false
+              });
+            }
 
             // Write the file
             fs.writeFileSync(saveUri.fsPath, dotContent);

@@ -36,6 +36,16 @@
           "type": "array",
           "default": ["*Test*", "*Tests*", "*TestProject*"],
           "description": "Glob patterns to identify test projects to exclude"
+        },
+        "csharpDependencyGraph.includeClassDependencies": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include class-level dependencies in the graph (more detailed but larger graph)"
+        },
+        "csharpDependencyGraph.excludeSourcePatterns": {
+          "type": "array",
+          "default": ["**/obj/**", "**/bin/**", "**/Generated/**", "**/node_modules/**"],
+          "description": "Glob patterns for source files to exclude from class dependency analysis"
         }
       }
     }
