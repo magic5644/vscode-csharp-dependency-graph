@@ -1,5 +1,9 @@
 # C# Dependency Graph
 
+<p align="center">
+  <img src="resources/icon.svg" width="128" height="128" alt="C# Dependency Graph Extension Icon">
+</p>
+
 Generate interactive dependency graphs for C# projects and classes directly from Visual Studio Code.
 
 ![C# Dependency Graph](images/dependency-graph-preview.png)

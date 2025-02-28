@@ -35,83 +35,19 @@
     </marker>
   </defs>
   
-  <!-- Fond avec texture subtile -->
-  <rect width="128" height="128" rx="16" fill="url(#backgroundGrad)" />
-  <rect width="128" height="128" rx="16" fill="url(#backgroundGrad)" opacity="0.9" />
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="128" fill="#68217A" rx="14" ry="14"/>
   
-  <!-- Overlay avec effet de grille -->
-  <g opacity="0.07">
-    <path d="M0,16 H128 M0,32 H128 M0,48 H128 M0,64 H128 M0,80 H128 M0,96 H128 M0,112 H128" stroke="#ffffff" stroke-width="0.5" />
-    <path d="M16,0 V128 M32,0 V128 M48,0 V128 M64,0 V128 M80,0 V128 M96,0 V128 M112,0 V128" stroke="#ffffff" stroke-width="0.5" />
-  </g>
+  <!-- Graph elements -->
+  <circle cx="32" cy="32" r="16" fill="#9C75D5" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="96" cy="32" r="16" fill="#9C75D5" stroke="#FFFFFF" stroke-width="2"/>
+  <circle cx="64" cy="96" r="16" fill="#9C75D5" stroke="#FFFFFF" stroke-width="2"/>
   
-  <!-- Connexions avec effets de lueur -->
-  <g stroke="#9B30CC" stroke-width="1.5" fill="none" filter="url(#glow)">
-    <!-- Niveau 1 vers niveau 2 -->
-    <path d="M64,30 L30,60" stroke-opacity="0.8" stroke="#B65AE9" marker-end="url(#arrowhead)" />
-    <path d="M64,30 L64,60" stroke-opacity="0.8" stroke="#B65AE9" marker-end="url(#arrowhead)" />
-    <path d="M64,30 L98,60" stroke-opacity="0.8" stroke="#B65AE9" marker-end="url(#arrowhead)" />
-    
-    <!-- Niveau 2 vers niveau 3 -->
-    <path d="M30,60 L20,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    <path d="M30,60 L40,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    <path d="M64,60 L52,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    <path d="M64,60 L76,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    <path d="M98,60 L88,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    <path d="M98,60 L108,90" stroke-opacity="0.7" marker-end="url(#arrowhead)" />
-    
-    <!-- Connexions transversales avec effet pulsé -->
-    <path d="M30,60 L98,60" stroke-opacity="0.4" stroke-dasharray="3,2" stroke="#CE8FFF">
-      <animate attributeName="stroke-opacity" values="0.2;0.6;0.2" dur="4s" repeatCount="indefinite" />
-    </path>
-    <path d="M40,90 L88,90" stroke-opacity="0.4" stroke-dasharray="3,2" stroke="#CE8FFF">
-      <animate attributeName="stroke-opacity" values="0.2;0.5;0.2" dur="3s" repeatCount="indefinite" />
-    </path>
-  </g>
-  
-  <!-- Cercles d'arrière-plan pour effet 3D -->
-  <circle cx="64" cy="30" r="15" fill="#3C133D" filter="url(#softShadow)" />
-  <circle cx="30" cy="60" r="11" fill="#3C133D" filter="url(#softShadow)" />
-  <circle cx="64" cy="60" r="11" fill="#3C133D" filter="url(#softShadow)" />
-  <circle cx="98" cy="60" r="11" fill="#3C133D" filter="url(#softShadow)" />
-  
-  <!-- Noeuds principaux avec effet de lueur -->
-  <circle cx="64" cy="30" r="14" fill="url(#nodeGradient)" filter="url(#glow)">
-    <animate attributeName="r" values="14;14.5;14" dur="2s" repeatCount="indefinite" />
-  </circle>
-  
-  <circle cx="30" cy="60" r="10" fill="url(#nodeGradient)" filter="url(#glow)" />
-  <circle cx="64" cy="60" r="10" fill="url(#nodeGradient)" filter="url(#glow)" />
-  <circle cx="98" cy="60" r="10" fill="url(#nodeGradient)" filter="url(#glow)" />
-  
-  <!-- Noeuds de niveau 3 avec effet brillant -->
-  <circle cx="20" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  <circle cx="40" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  <circle cx="52" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  <circle cx="76" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  <circle cx="88" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  <circle cx="108" cy="90" r="7" fill="#8B2FBB" filter="url(#glow)" />
-  
-  <!-- Textes avec effet brillant -->
-  <text x="64" y="34" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle" filter="url(#glow)">C#</text>
-  
-  <text x="30" y="63" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">A</text>
-  <text x="64" y="63" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">B</text>
-  <text x="98" y="63" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">C</text>
-  
-  <!-- Particules dynamiques autour du graphe -->
-  <g opacity="0.7" filter="url(#glow)">
-    <circle cx="45" cy="40" r="1" fill="#CE8FFF">
-      <animate attributeName="opacity" values="0;1;0" dur="3s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="85" cy="45" r="1" fill="#CE8FFF">
-      <animate attributeName="opacity" values="0;1;0" dur="2.5s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="55" cy="80" r="1" fill="#CE8FFF">
-      <animate attributeName="opacity" values="0;1;0" dur="3.5s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="75" cy="75" r="1" fill="#CE8FFF">
-      <animate attributeName="opacity" values="0;1;0" dur="4s" repeatCount="indefinite" />
-    </circle>
-  </g>
+  <!-- Connection lines -->
+  <line x1="44" y1="36" x2="84" y2="36" stroke="#FFFFFF" stroke-width="3"/>
+  <line x1="32" y1="48" x2="56" y2="84" stroke="#FFFFFF" stroke-width="3"/>
+  <line x1="96" y1="48" x2="72" y2="84" stroke="#FFFFFF" stroke-width="3"/>
+
+  <!-- C# Logo -->
+  <text x="64" y="64" font-size="24" font-family="Arial, sans-serif" font-weight="bold" text-anchor="middle" fill="#FFFFFF">C#</text>
 </svg>
