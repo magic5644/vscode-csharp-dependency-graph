@@ -20,11 +20,11 @@ export function generateDotFile(
   dotContent += '  edge [fontname="Helvetica", fontsize=10];\n\n';
 
   if (options.includeClassDependencies && classDependencies) {
-    // Générer un graphe avec les dépendances de classes
+    // Generate a graph with class dependencies
     return generateClassDependencyGraph(projects, classDependencies, options);
   }
   
-  // Graphe de dépendances au niveau projet
+  // Project-level dependency graph
   
   // Define nodes
   for (const project of projects) {
@@ -49,7 +49,7 @@ export function generateDotFile(
 }
 
 /**
- * Génère un graphe DOT pour les dépendances entre classes
+ * Generates a DOT graph for dependencies between classes
  */
 function generateClassDependencyGraph(
   projects: Project[],
@@ -61,18 +61,18 @@ function generateClassDependencyGraph(
   dotContent += '  node [shape=box, style=filled, fontname="Helvetica", fontsize=11];\n';
   dotContent += '  edge [fontname="Helvetica", fontsize=9];\n\n';
   
-  // Créer des sous-graphes par projet
+  // Create subgraphs by project
   for (const project of projects) {
     dotContent += `  subgraph "cluster_${project.name}" {\n`;
     dotContent += `    label="${project.name}${options.includeNetVersion && project.targetFramework ? ' (' + project.targetFramework + ')' : ''}";\n`;
     dotContent += '    style="filled";\n';
     dotContent += '    color=lightgrey;\n\n';
     
-    // Ajouter les nœuds des classes de ce projet
+    // Add nodes for the classes of this project
     const projectClasses = classDependencies.filter(c => c.projectName === project.name);
     
     for (const classInfo of projectClasses) {
-      // Utiliser le nom complet de la classe avec namespace pour l'ID du nœud
+      // Use the full class name with namespace for the node ID
       const nodeId = `"${project.name}.${classInfo.className}"`;
       dotContent += `    ${nodeId} [label="${classInfo.className}", fillcolor=white, tooltip="${classInfo.namespace}.${classInfo.className}"];\n`;
     }
@@ -80,18 +80,18 @@ function generateClassDependencyGraph(
     dotContent += '  }\n\n';
   }
   
-  // Ajouter les arêtes pour les dépendances
+  // Add edges for the dependencies
   for (const classInfo of classDependencies) {
     const sourceNodeId = `"${classInfo.projectName}.${classInfo.className}"`;
     
     for (const dependency of classInfo.dependencies) {
-      // Essayer de trouver la classe cible dans toutes les classes
-      // D'abord, chercher dans le même projet
+      // Try to find the target class in all classes
+      // First, search in the same project
       let targetClass = classDependencies.find(
         c => c.projectName === classInfo.projectName && c.className === dependency
       );
       
-      // Si non trouvé, chercher dans tous les projets
+      // If not found, search in all projects
       if (!targetClass) {
         targetClass = classDependencies.find(c => c.className === dependency);
       }

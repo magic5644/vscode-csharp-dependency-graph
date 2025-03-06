@@ -49,3 +49,18 @@ export async function findCsprojFiles(
   await searchDirectory(directoryPath);
   return csprojFiles;
 }
+
+/**
+ * Checks if a file path matches any of the exclusion patterns
+ */
+function isExcluded(filePath: string, excludePatterns: string[]): boolean {
+  try {
+    return excludePatterns.some(pattern => {
+      // Use the correct minimatch syntax
+      return minimatch(filePath, pattern, { dot: true, matchBase: true });
+    });
+  } catch (error) {
+    console.error(`Error checking path ${filePath}:`, error);
+    return false; // Do not exclude the file in case of error
+  }
+}

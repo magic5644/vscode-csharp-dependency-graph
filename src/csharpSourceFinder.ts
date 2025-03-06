@@ -6,9 +6,9 @@ import { minimatch } from 'minimatch';
 const readdir = util.promisify(fs.readdir);
 
 /**
- * Trouve tous les fichiers .cs dans les projets spécifiés
- * @param projectPaths Chemins des projets à analyser
- * @param excludePatterns Motifs de fichiers à exclure
+ * Finds all .cs files in the specified projects
+ * @param projectPaths Paths of the projects to analyze
+ * @param excludePatterns File patterns to exclude
  */
 export async function findCSharpSourceFiles(
   projectPaths: string[],
@@ -24,12 +24,12 @@ export async function findCSharpSourceFiles(
       
       await searchDirectory(projectDir, sourceFiles, excludePatterns);
       
-      // Ne pas ajouter le projet s'il n'y a pas de fichiers source
+      // Do not add the project if there are no source files
       if (sourceFiles.length > 0) {
         projectSourceFiles.set(projectName, sourceFiles);
       }
     } catch (err) {
-      console.error(`Erreur lors de l'analyse du projet ${projectPath}:`, err);
+      console.error(`Error analyzing project ${projectPath}:`, err);
     }
   }
   
@@ -41,7 +41,7 @@ async function searchDirectory(
   results: string[], 
   excludePatterns: string[]
 ): Promise<void> {
-  // Vérifier si le répertoire correspond à un motif d'exclusion
+  // Check if the directory matches an exclusion pattern
   if (isExcluded(dir, excludePatterns)) {
     return;
   }
@@ -53,33 +53,33 @@ async function searchDirectory(
       const fullPath = path.join(dir, entry.name);
       
       if (entry.isDirectory()) {
-        // Récursion dans les sous-répertoires, mais pas dans les répertoires exclus
+        // Recursion into subdirectories, but not excluded directories
         if (!isExcluded(fullPath, excludePatterns)) {
           await searchDirectory(fullPath, results, excludePatterns);
         }
       } else if (entry.isFile() && entry.name.endsWith('.cs')) {
-        // Ajouter le fichier .cs s'il n'est pas exclu
+        // Add the .cs file if it is not excluded
         if (!isExcluded(fullPath, excludePatterns)) {
           results.push(fullPath);
         }
       }
     }
   } catch (error) {
-    console.error(`Erreur lors de la recherche dans ${dir}:`, error);
+    console.error(`Error searching in ${dir}:`, error);
   }
 }
 
 /**
- * Vérifie si un chemin de fichier correspond à l'un des motifs d'exclusion
+ * Checks if a file path matches any of the exclusion patterns
  */
 function isExcluded(filePath: string, excludePatterns: string[]): boolean {
   try {
     return excludePatterns.some(pattern => {
-      // Utiliser la syntaxe correcte de minimatch
+      // Use the correct minimatch syntax
       return minimatch(filePath, pattern, { dot: true, matchBase: true });
     });
   } catch (error) {
-    console.error(`Erreur lors de la vérification du chemin ${filePath}:`, error);
-    return false; // En cas d'erreur, ne pas exclure le fichier
+    console.error(`Error checking path ${filePath}:`, error);
+    return false; // Do not exclude the file in case of error
   }
 }

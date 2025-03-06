@@ -3,13 +3,13 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
 
-// Vous pouvez utiliser les suites de tests pour grouper les tests
+// You can use test suites to group tests
 suite('Extension Test Suite', () => {
-  // Attendez que l'extension soit activée
+  // Wait for the extension to be activated
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('vscode-csharp-dependency-graph'));
+    assert.ok(vscode.extensions.getExtension('magic-vscode-csharp-dependency-graph'));
   });
 
   test('Command should be registered', async () => {
@@ -17,19 +17,23 @@ suite('Extension Test Suite', () => {
     assert.ok(commands.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
   });
   
-  // Test basique pour vérifier si la commande peut s'exécuter
+  // Basic test to check if the command can execute
   test('Command execution should not throw an error', async function() {
-    this.timeout(10000); // Augmenter le timeout car la commande peut prendre du temps
+    this.timeout(10000); // Increase timeout because the command can take time
+    
+    // Create a temporary file for the test
+    const tmpDir = os.tmpdir();
+    const outputPath = path.join(tmpDir, 'test-dependency-graph.dot');
     
     try {
-      // La commande peut avoir besoin d'un workspace ouvert avec des projets C#
-      // Ce test peut échouer s'il n'y a pas de projets C# dans le workspace
+      // The command may need a workspace opened with C# projects
+      // This test may fail if there are no C# projects in the workspace
       await vscode.commands.executeCommand('vscode-csharp-dependency-graph.generate-dependency-graph');
       
-      // Idéalement, vous devriez vérifier que le fichier a été créé
-      // Mais comme le système de dialogue de sauvegarde s'ouvre, c'est difficile à automatiser
+      // Ideally, you should verify that the file was created
+      // But since the save dialog opens, it's difficult to automate
     } catch (error) {
-      // La commande peut échouer si aucun workspace n'est ouvert, ce qui est normal en test
+      // The command may fail if no workspace is open, which is normal in testing
       console.log('Command execution failed, but test continues:', error);
     }
   });

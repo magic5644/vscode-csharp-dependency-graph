@@ -13,7 +13,8 @@ export interface ClassDependency {
 }
 
 /**
- * Analyse les fichiers source C# pour extraire les classes et leurs dépendances
+ * Analyzes C# source files to extract classes and their dependencies
+ * @param projectSourceFiles Map of projects and their source files
  */
 export async function parseClassDependencies(
   projectSourceFiles: Map<string, string[]>
@@ -27,7 +28,7 @@ export async function parseClassDependencies(
         const fileClasses = extractClassesFromFile(content, filePath, projectName);
         classDependencies.push(...fileClasses);
       } catch (error) {
-        console.error(`Erreur lors de l'analyse du fichier ${filePath}:`, error);
+        console.error(`Error analyzing file ${filePath}:`, error);
       }
     }
   }
@@ -36,7 +37,7 @@ export async function parseClassDependencies(
 }
 
 /**
- * Extrait les informations des classes d'un fichier C#
+ * Extracts class information from a C# file
  */
 function extractClassesFromFile(
   content: string, 
@@ -45,72 +46,24 @@ function extractClassesFromFile(
 ): ClassDependency[] {
   const classes: ClassDependency[] = [];
   
-  // Chercher les imports
+  // Find usings/imports
   const imports = extractImports(content);
   
-  // Chercher le namespace - Adding a limit to the word character matching
-  const namespaceMatch = content.match(/namespace\s+(\w{1,100})/);
+  // Find the namespace
+  const namespaceRegex = /namespace\s+(\w{1,100})/;
+  const namespaceMatch = namespaceRegex.exec(content);
   const namespace = namespaceMatch ? namespaceMatch[1] : '';
   
-  // Expression simplifiée pour trouver les classes
-  // Division en 2 regex plus simples
+  // Simplified expression to find classes
+  // Split into 2 simpler regexes
   const classLines = content.split('\n').filter(line => 
     /\bclass\s+\w{1,100}/.test(line)
   );
   
   for (const line of classLines) {
-    // Extraire le nom de la classe - Adding a limit to word character matching
-    const classNameMatch = line.match(/\bclass\s+(\w{1,100})/);
-    if (!classNameMatch) continue;
-    
-    const className = classNameMatch[1];
-    const dependencies: string[] = [];
-    
-    // Chercher s'il y a héritage sur cette ligne - FIX: limit the negated character class
-    const inheritanceMatch = line.match(/\s*:\s*([^{]{1,500})/);
-    if (inheritanceMatch) {
-      const inheritanceStr = inheritanceMatch[1];
-      const parts = inheritanceStr.split(',').map(p => p.trim());
-      
-      for (const part of parts) {
-        if (part !== 'object' && part !== 'System.Object') {
-          const baseClassName = part.split('<')[0].trim();
-          dependencies.push(baseClassName);
-        }
-      }
-    }
-    
-    // Trouver l'indice du début de la classe
-    const classIndex = content.indexOf(line);
-    if (classIndex < 0) continue;
-    
-    // Extraire le corps de la classe
-    const classContent = getClassBody(content, classIndex);
-    if (classContent) {
-      // Analyse en plusieurs passes avec des regex simples
-      
-      // 1. Trouver les instanciations avec 'new'
-      findNewInstantiations(classContent, dependencies);
-      
-      // 2. Trouver les appels de méthode statique
-      findStaticCalls(classContent, dependencies);
-      
-      // 3. Trouver les types de variables
-      findVariableTypes(classContent, dependencies);
-      
-      // Filtrer les dépendances
-      const filteredDeps = dependencies.filter(dep => 
-        !isPrimitiveType(dep) && 
-        dep !== className
-      );
-      
-      classes.push({
-        className,
-        projectName,
-        namespace,
-        dependencies: [...new Set(filteredDeps)], // Dédupliquer
-        filePath
-      });
+    const classDep = processClassLine(line, content, projectName, namespace, filePath);
+    if (classDep) {
+      classes.push(classDep);
     }
   }
   
@@ -118,10 +71,90 @@ function extractClassesFromFile(
 }
 
 /**
- * Trouve les instanciations avec 'new'
+ * Process a single class line to extract dependency information
+ */
+function processClassLine(
+  line: string,
+  content: string,
+  projectName: string,
+  namespace: string,
+  filePath: string
+): ClassDependency | null {
+  // Extract the class name
+  const classNameRegex = /\bclass\s+(\w{1,100})/;
+  const classNameMatch = classNameRegex.exec(line);
+  if (!classNameMatch) return null;
+  
+  const className = classNameMatch[1];
+  const dependencies: string[] = [];
+  
+  // Extract inheritance dependencies
+  extractInheritanceDependencies(line, dependencies);
+  
+  // Find the index of the beginning of the class
+  const classIndex = content.indexOf(line);
+  if (classIndex < 0) return null;
+  
+  // Extract the class body
+  const classContent = getClassBody(content, classIndex);
+  if (!classContent) return null;
+  
+  // Extract dependencies from class content
+  extractDependenciesFromClassContent(classContent, dependencies);
+  
+  // Filter dependencies
+  const filteredDeps = dependencies.filter(dep => 
+    !isPrimitiveType(dep) && 
+    dep !== className
+  );
+  
+  return {
+    className,
+    projectName,
+    namespace,
+    dependencies: [...new Set(filteredDeps)], // Deduplicate
+    filePath
+  };
+}
+
+/**
+ * Extract inheritance dependencies from a class declaration line
+ */
+function extractInheritanceDependencies(line: string, dependencies: string[]): void {
+  const inheritanceRegex = /\s*:\s*([^{]{1,500})/;
+  const inheritanceMatch = inheritanceRegex.exec(line);
+  if (!inheritanceMatch) return;
+  
+  const inheritanceStr = inheritanceMatch[1];
+  const parts = inheritanceStr.split(',').map(p => p.trim());
+  
+  for (const part of parts) {
+    if (part !== 'object' && part !== 'System.Object') {
+      const baseClassName = part.split('<')[0].trim();
+      dependencies.push(baseClassName);
+    }
+  }
+}
+
+/**
+ * Extract dependencies from class content
+ */
+function extractDependenciesFromClassContent(classContent: string, dependencies: string[]): void {
+  // 1. Find instantiations with 'new'
+  findNewInstantiations(classContent, dependencies);
+  
+  // 2. Find static method calls
+  findStaticCalls(classContent, dependencies);
+  
+  // 3. Find variable types
+  findVariableTypes(classContent, dependencies);
+}
+
+/**
+ * Finds instantiations with 'new'
  */
 function findNewInstantiations(content: string, dependencies: string[]) {
-  // Regex simplifiée - Adding a limit to word character matching
+  // Simplified regex - just for 'new TypeName'
   const newRegex = /new\s+(\w{1,100})/g;
   let match;
   
@@ -133,10 +166,10 @@ function findNewInstantiations(content: string, dependencies: string[]) {
 }
 
 /**
- * Trouve les appels de méthode statique
+ * Finds static method calls
  */
 function findStaticCalls(content: string, dependencies: string[]) {
-  // Regex simplifiée - Adding limits to both word character matchings
+  // Simplified regex for static calls
   const staticRegex = /(\w{1,100})\.\w{1,100}\(/g;
   let match;
   
@@ -150,14 +183,14 @@ function findStaticCalls(content: string, dependencies: string[]) {
 }
 
 /**
- * Trouve les types de variables
+ * Finds variable types
  */
 function findVariableTypes(content: string, dependencies: string[]) {
-  // Diviser en lignes pour simplifier l'analyse
+  // Split into lines to simplify analysis
   const lines = content.split('\n');
   
   for (const line of lines) {
-    // Chercher les définitions de variables/champs - Adding limits to word characters
+    // Search for variable/field definitions with a simple regex
     const typeMatch = line.match(/^\s*(\w{1,100})\s+\w{1,100}\s*[=;{]/);
     if (typeMatch && typeMatch[1] && !isPrimitiveType(typeMatch[1])) {
       dependencies.push(typeMatch[1]);
@@ -166,17 +199,17 @@ function findVariableTypes(content: string, dependencies: string[]) {
 }
 
 /**
- * Extrait les imports d'un fichier C#
+ * Extracts imports from a C# file
  */
 function extractImports(content: string): string[] {
   const imports: string[] = [];
-  // Approche ligne par ligne plus sûre
+  // Line-by-line approach is safer
   const lines = content.split('\n');
   
   for (const line of lines) {
-    // Expression simplifiée
+    // Simplified expression
     if (line.trim().startsWith('using ') && line.trim().endsWith(';')) {
-      const usingPart = line.trim().slice(5, -1).trim(); // Extrait entre 'using ' et ';'
+      const usingPart = line.trim().slice(5, -1).trim(); // Extract between 'using ' and ';'
       imports.push(usingPart);
     }
   }
@@ -185,13 +218,13 @@ function extractImports(content: string): string[] {
 }
 
 /**
- * Obtient le corps d'une classe avec une méthode plus robuste
+ * Gets the body of a class with a more robust method
  */
 function getClassBody(content: string, startIndex: number): string | null {
   let openBraces = 0;
   let startPos = -1;
   
-  // Chercher d'abord l'accolade ouvrante
+  // First, find the opening brace
   for (let i = startIndex; i < content.length; i++) {
     if (content[i] === '{') {
       startPos = i;
@@ -202,7 +235,7 @@ function getClassBody(content: string, startIndex: number): string | null {
   
   if (startPos === -1) return null;
   
-  // Ensuite chercher l'accolade fermante correspondante
+  // Then find the matching closing brace
   for (let i = startPos + 1; i < content.length; i++) {
     if (content[i] === '{') {
       openBraces++;
@@ -214,11 +247,11 @@ function getClassBody(content: string, startIndex: number): string | null {
     }
   }
   
-  return null;
+  return null; // No balanced closing brace found
 }
 
 /**
- * Liste des types primitifs C#
+ * List of C# primitive types
  */
 function isPrimitiveType(type: string): boolean {
   const primitiveTypes = [

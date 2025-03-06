@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
         const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
         const includeClassDependencies = config.get<boolean>('includeClassDependencies', false);
 
-        // Demander le type de graphe à générer
+        // Ask the user for the type of graph to generate
         const graphType = await vscode.window.showQuickPick(
           [
             { label: 'Project Dependencies', description: 'Generate graph with project-level dependencies' },
@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
             
             if (generateClassGraph) {
               try {
-                // Récupérer les patterns d'exclusion de fichiers source
+                // Get source file exclusion patterns
                 const excludeSourcePatterns = config.get<string[]>(
                   'excludeSourcePatterns', 
                   ["**/obj/**", "**/bin/**", "**/Generated/**", "**/node_modules/**"]
@@ -93,7 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
                 progress.report({ message: 'Finding C# source files...' });
                 const projectSourceFiles = await findCSharpSourceFiles(csprojFiles, excludeSourcePatterns);
                 
-                // Vérifier qu'on a trouvé des fichiers source
+                // Verify that source files were found
                 const totalSourceFiles = Array.from(projectSourceFiles.values())
                   .reduce((sum, files) => sum + files.length, 0);
                   
@@ -115,10 +115,10 @@ export function activate(context: vscode.ExtensionContext) {
                   includeClassDependencies: true
                 }, classDependencies);
                 
-                // Log pour le débogage
+                // Log for debugging
                 console.log(`Generated graph with ${classDependencies.length} classes and their dependencies`);
               } catch (error) {
-                console.error('Erreur lors de l\'analyse des classes:', error);
+                console.error('Error during class analysis:', error);
                 // Fallback to project-level graph if class analysis fails
                 progress.report({ message: 'Class analysis failed, generating project-level graph instead...' });
                 dotContent = generateDotFile(projects, {
