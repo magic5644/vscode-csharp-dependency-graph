@@ -46,11 +46,8 @@ function extractClassesFromFile(
 ): ClassDependency[] {
   const classes: ClassDependency[] = [];
   
-  // Find usings/imports
-  const imports = extractImports(content);
-  
   // Find the namespace
-  const namespaceRegex = /namespace\s+([\w\.]+)/;
+  const namespaceRegex = /namespace\s+([\w.]+)/;
   const namespaceMatch = namespaceRegex.exec(content);
   const namespace = namespaceMatch ? namespaceMatch[1] : '';
   
@@ -191,8 +188,9 @@ function findVariableTypes(content: string, dependencies: string[]) {
   
   for (const line of lines) {
     // Search for variable/field definitions with a simple regex
-    const typeMatch = line.match(/^\s*(\w{1,100})\s+\w{1,100}\s*[=;{]/);
-    if (typeMatch && typeMatch[1] && !isPrimitiveType(typeMatch[1])) {
+    const typeRegex = /^\s*(\w{1,100})\s+\w{1,100}\s*[=;{]/;
+    const typeMatch = typeRegex.exec(line);
+    if (typeMatch?.[1] && !isPrimitiveType(typeMatch[1])) {
       dependencies.push(typeMatch[1]);
     }
   }
