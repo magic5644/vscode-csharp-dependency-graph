@@ -18,29 +18,42 @@ export async function findCsprojFiles(
 ): Promise<string[]> {
   const csprojFiles: string[] = [];
   
+  // Helper function to check if directory should be processed
+  function shouldProcessDirectory(entry: fs.Dirent): boolean {
+    return entry.isDirectory() && 
+           entry.name !== 'node_modules' && 
+           entry.name !== '.git' && 
+           !entry.name.startsWith('.');
+  }
+  
+  // Helper function to check if file is a csproj that should be included
+  function shouldIncludeCsprojFile(entry: fs.Dirent): boolean {
+    if (!entry.isFile() || !entry.name.endsWith('.csproj')) {
+      return false;
+    }
+    
+    if (!excludeTestProjects) {
+      return true;
+    }
+    
+    // Check if it matches any test project pattern
+    return !testProjectPatterns.some(pattern => minimatch(entry.name, pattern));
+  }
+  
   async function searchDirectory(dir: string) {
     const entries = await readdir(dir, { withFileTypes: true });
     
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       
-      // Skip node_modules and .git directories
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && entry.name !== '.git' && !entry.name.startsWith('.')) {
-          await searchDirectory(fullPath);
-        }
-      } else if (entry.isFile() && entry.name.endsWith('.csproj')) {
-        // Check if it's a test project and should be excluded
-        if (excludeTestProjects) {
-          const isTestProject = testProjectPatterns.some(pattern => 
-            minimatch(entry.name, pattern)
-          );
-          
-          if (isTestProject) {
-            continue; // Skip this test project
-          }
-        }
-        
+      // Process directories
+      if (shouldProcessDirectory(entry)) {
+        await searchDirectory(fullPath);
+        continue;
+      }
+      
+      // Process csproj files
+      if (shouldIncludeCsprojFile(entry)) {
         csprojFiles.push(fullPath);
       }
     }

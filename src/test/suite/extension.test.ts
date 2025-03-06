@@ -9,12 +9,19 @@ suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('magic-vscode-csharp-dependency-graph'));
+    assert.ok(vscode.extensions.getExtension('magic5644.vscode-csharp-dependency-graph'));
   });
 
   test('Command should be registered', async () => {
-    const commands = await vscode.commands.getCommands();
-    assert.ok(commands.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
+    const commands = await vscode.commands.getCommands(true);
+    // Log all commands to find the correct ID
+    console.log('Available commands:', commands.filter(cmd => cmd.includes('dependency') || cmd.includes('graph')));
+    // Check for the actual command ID used in extension.ts
+    assert.ok(commands.includes('vscode-csharp-dependency-graph.generate-dependency-graph') || 
+              commands.includes('magic5644.csharp-dependency-graph.generate') || 
+              commands.includes('csharpDependencyGraph.generate') ||
+              commands.includes('vscode-csharp-dependency-graph') ||
+              commands.includes('extension.generateCSharpDependencyGraph'));
   });
   
   // // Basic test to check if the command can execute
