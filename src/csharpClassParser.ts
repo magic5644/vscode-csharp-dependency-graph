@@ -50,7 +50,7 @@ function extractClassesFromFile(
   const imports = extractImports(content);
   
   // Find the namespace
-  const namespaceRegex = /namespace\s+(\w{1,100})/;
+  const namespaceRegex = /namespace\s+([\w\.]+)/;
   const namespaceMatch = namespaceRegex.exec(content);
   const namespace = namespaceMatch ? namespaceMatch[1] : '';
   
