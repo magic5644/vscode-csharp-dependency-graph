@@ -5,6 +5,14 @@ node_modules/
 out/
 dist/
 *.vsix
+test-workspace/ProjectA/obj/
+test-workspace/ProjectA/bin/
+test-workspace/ProjectA/Debug/
+test-workspace/ProjectA/Release/
+test-workspace/ProjectB/obj/
+test-workspace/ProjectB/bin/
+test-workspace/ProjectB/Debug/
+test-workspace/ProjectB/Release/
 
 # TypeScript incremental compilation cache
 *.tsbuildinfo

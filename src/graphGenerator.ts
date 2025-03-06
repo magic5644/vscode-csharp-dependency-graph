@@ -14,10 +14,7 @@ export function generateDotFile(
   options: GraphOptions,
   classDependencies?: ClassDependency[]
 ): string {
-  let dotContent = 'digraph CSharpDependencies {\n';
-  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14];\n';
-  dotContent += '  node [shape=box, style=filled, fillcolor=lightblue, fontname="Helvetica", fontsize=12];\n';
-  dotContent += '  edge [fontname="Helvetica", fontsize=10];\n\n';
+  let dotContent = injectHeadOfDotFile();
 
   if (options.includeClassDependencies && classDependencies) {
     // Generate a graph with class dependencies
@@ -44,7 +41,7 @@ export function generateDotFile(
     }
   }
   
-  dotContent += '}\n';
+  dotContent += injectEndOfDotFile();
   return dotContent;
 }
 
@@ -56,10 +53,7 @@ function generateClassDependencyGraph(
   classDependencies: ClassDependency[],
   options: GraphOptions
 ): string {
-  let dotContent = 'digraph CSharpDependencies {\n';
-  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=ortho];\n';
-  dotContent += '  node [shape=box, style=filled, fontname="Helvetica", fontsize=11];\n';
-  dotContent += '  edge [fontname="Helvetica", fontsize=9];\n\n';
+  let dotContent = injectHeadOfDotFile();
   
   // Create subgraphs by project
   for (const project of projects) {
@@ -103,6 +97,19 @@ function generateClassDependencyGraph(
     }
   }
   
-  dotContent += '}\n';
+  dotContent += injectEndOfDotFile();
+  return dotContent;
+}
+
+function injectHeadOfDotFile() {
+  let dotContent = 'digraph CSharpDependencies {\n';
+  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=ortho];\n';
+  dotContent += '  node [shape=box, style=filled, fillcolor=lightblue, fontname="Helvetica", fontsize=11];\n';
+  dotContent += '  edge [fontname="Helvetica", fontsize=9];\n\n';
+  return dotContent;
+}
+
+function injectEndOfDotFile() {
+  const dotContent = '}\n';
   return dotContent;
 }

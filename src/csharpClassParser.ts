@@ -19,7 +19,7 @@ export interface ClassDependency {
  */
 export async function parseClassDependencies(
   projectSourceFiles: Map<string, string[]>,
-  includeClassDependencies = false
+  includeClassDependencies = true
 ): Promise<ClassDependency[]> {
   // Return empty array if class dependencies should not be included
   if (!includeClassDependencies) {
