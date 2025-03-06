@@ -15,10 +15,17 @@ export interface ClassDependency {
 /**
  * Analyzes C# source files to extract classes and their dependencies
  * @param projectSourceFiles Map of projects and their source files
+ * @param includeClassDependencies Whether to include class-level dependencies
  */
 export async function parseClassDependencies(
-  projectSourceFiles: Map<string, string[]>
+  projectSourceFiles: Map<string, string[]>,
+  includeClassDependencies = false
 ): Promise<ClassDependency[]> {
+  // Return empty array if class dependencies should not be included
+  if (!includeClassDependencies) {
+    return [];
+  }
+  
   const classDependencies: ClassDependency[] = [];
   
   for (const [projectName, sourceFiles] of projectSourceFiles.entries()) {

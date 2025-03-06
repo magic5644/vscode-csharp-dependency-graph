@@ -1,8 +1,9 @@
 {
-  "name": "magic-vscode-csharp-dependency-graph",
+  "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph",
   "description": "Generate dependency graphs for C# projects",
   "version": "0.1.0",
+  "publisher": "magic5644",
   "engines": {
     "vscode": "^1.60.0"
   },
