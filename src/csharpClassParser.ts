@@ -118,7 +118,7 @@ function processClassLine(
  * Extract inheritance dependencies from a class declaration line
  */
 function extractInheritanceDependencies(line: string, dependencies: string[]): void {
-  const inheritanceRegex = /\s*:\s*((?:[^{])*?)(?={|$)/;
+  const inheritanceRegex = /\s*:\s*([^{]*?)(?={|$)/;
   const inheritanceMatch = inheritanceRegex.exec(line);
   if (!inheritanceMatch) return;
   
