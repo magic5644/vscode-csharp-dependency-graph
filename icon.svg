@@ -1,0 +1,65 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners -->
+  <rect x="4" y="4" width="120" height="120" rx="16" ry="16" fill="#68217A" />
+  
+  <!-- Inner background with light gradient -->
+  <rect x="8" y="8" width="112" height="112" rx="12" ry="12" fill="url(#bgGradient)" />
+  
+  <!-- C# Symbol (subtle incorporation) -->
+  <text x="87" y="42" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#68217A">#</text>
+  
+  <!-- Graph Nodes and Connections -->
+  <!-- Main Central Node -->
+  <circle cx="64" cy="64" r="18" fill="url(#centralNodeGradient)" stroke="#ffffff" stroke-width="2" />
+  
+  <!-- Secondary Nodes -->
+  <circle cx="32" cy="32" r="12" fill="url(#node1Gradient)" stroke="#ffffff" stroke-width="1.5" />
+  <circle cx="96" cy="36" r="12" fill="url(#node2Gradient)" stroke="#ffffff" stroke-width="1.5" />
+  <circle cx="28" cy="88" r="12" fill="url(#node3Gradient)" stroke="#ffffff" stroke-width="1.5" />
+  <circle cx="92" cy="92" r="12" fill="url(#node4Gradient)" stroke="#ffffff" stroke-width="1.5" />
+  
+  <!-- Connections -->
+  <line x1="42" y1="42" x2="60" y2="58" stroke="#ffffff" stroke-width="2" stroke-opacity="0.7" />
+  <line x1="84" y1="46" x2="72" y2="56" stroke="#ffffff" stroke-width="2" stroke-opacity="0.7" />
+  <line x1="40" y1="82" x2="56" y2="72" stroke="#ffffff" stroke-width="2" stroke-opacity="0.7" />
+  <line x1="80" y1="82" x2="70" y2="74" stroke="#ffffff" stroke-width="2" stroke-opacity="0.7" />
+  
+  <!-- Add light dots to connections for visual interest -->
+  <circle cx="51" cy="50" r="2" fill="#ffffff" />
+  <circle cx="78" cy="51" r="2" fill="#ffffff" />
+  <circle cx="48" cy="77" r="2" fill="#ffffff" />
+  <circle cx="75" cy="78" r="2" fill="#ffffff" />
+  
+  <!-- Definitions for gradients -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7A2E8F" />
+      <stop offset="100%" stop-color="#68217A" />
+    </linearGradient>
+    
+    <radialGradient id="centralNodeGradient" cx="40%" cy="40%" r="60%" fx="40%" fy="40%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#36B6F0" />
+    </radialGradient>
+    
+    <radialGradient id="node1Gradient" cx="40%" cy="40%" r="60%" fx="40%" fy="40%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#36B6F0" />
+    </radialGradient>
+    
+    <radialGradient id="node2Gradient" cx="40%" cy="40%" r="60%" fx="40%" fy="40%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#3F8A36" />
+    </radialGradient>
+    
+    <radialGradient id="node3Gradient" cx="40%" cy="40%" r="60%" fx="40%" fy="40%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#3F8A36" />
+    </radialGradient>
+    
+    <radialGradient id="node4Gradient" cx="40%" cy="40%" r="60%" fx="40%" fy="40%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#36B6F0" />
+    </radialGradient>
+  </defs>
+</svg>

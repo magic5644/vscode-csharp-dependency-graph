@@ -1,19 +1,34 @@
 {
   "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph",
-  "description": "Generate dependency graphs for C# projects",
+  "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
   "version": "0.1.0",
-  "publisher": "magic5644",
+  "publisher": "Gildas Le Bournault",
+  "author": {
+    "name": "Gildas Le Bournault"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
     "Visualization",
+    "Programming Languages",
     "Other"
   ],
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
+  "pricing": "Free",
   "activationEvents": [],
   "main": "./dist/extension.js",
-  "icon": "resources/icon.svg",
+  "icon": "resources/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magic5644/vscode-csharp-dependency-graph"
+  },
+  "homepage": "https://github.com/magic5644/vscode-csharp-dependency-graph/main/readme.md",
   "contributes": {
     "commands": [
       {

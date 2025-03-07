@@ -1,12 +1,10 @@
 # C# Dependency Graph
 
 <p align="center">
-  <img src="resources/icon.svg" width="128" height="128" alt="C# Dependency Graph Extension Icon">
+  <img src="resources/icon.png" width="128" height="128" alt="C# Dependency Graph Extension Icon">
 </p>
 
 Generate interactive dependency graphs for C# projects and classes directly from Visual Studio Code.
-
-![C# Dependency Graph](resources/graph_example.png)
 
 ## Features
 
@@ -15,6 +13,25 @@ Generate interactive dependency graphs for C# projects and classes directly from
 - **Customizable output**: Configure which elements to include in your dependency graph
 - **Exclude test projects**: Option to exclude test projects from the analysis
 - **DOT file output**: Generate standard DOT files for use with Graphviz or other visualization tools
+
+## Screenshots
+
+### Project Dependencies
+
+![Project Dependencies](resources/csharp-project-dependencies.gif)
+
+Select view->Command Palette: `C#: Generate Dependency Graph` and select `Project Dependencies`
+Graph is generated in  the selected folder. You can open it in Graphviz, Graphviz Online or Graphviz Preview
+
+### Class Dependencies
+
+Select view->Command Palette: `C#: Generate Dependency Graph` and select `Class Dependencies`
+Graph is generated in  the selected folder. You can open it in Graphviz, Graphviz Online or Graphviz Preview
+
+![Class Dependencies](resources/csharp-class-dependencies.gif)
+
+Another example of class dependencies
+![C# Dependency Graph](resources/graph_example.png)
 
 ## Installation
 
@@ -34,7 +51,7 @@ Generate interactive dependency graphs for C# projects and classes directly from
 
 ## Requirements
 
-- Visual Studio Code 1.60.0 or higher
+- Visual Studio Code 1.75.0 or higher
 - A C# project (typically a .NET solution with .csproj files)
 
 ## Usage
