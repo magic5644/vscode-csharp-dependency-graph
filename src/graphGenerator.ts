@@ -61,7 +61,7 @@ function generateClassDependencyGraph(
     dotContent += `  subgraph "cluster_${project.name}" {\n`;
     dotContent += `    label="${project.name}${options.includeNetVersion && project.targetFramework ? ' (' + project.targetFramework + ')' : ''}";\n`;
     dotContent += `    style="filled";\n`;
-    dotContent += `    color=${options.classDependencyColor};\n\n`;
+    dotContent += `    color="${options.classDependencyColor}";\n\n`;
     
     // Add nodes for the classes of this project
     const projectClasses = classDependencies.filter(c => c.projectName === project.name);
