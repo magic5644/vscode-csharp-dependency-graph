@@ -3,7 +3,7 @@
   "displayName": "C# Dependency Graph",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
   "version": "0.1.0",
-  "publisher": "Gildas Le Bournault",
+  "publisher": "magic5644",
   "author": {
     "name": "Gildas Le Bournault"
   },
@@ -20,7 +20,7 @@
     "theme": "dark"
   },
   "pricing": "Free",
-  "activationEvents": [],
+  "activationEvents": ["onStartupFinished"],
   "main": "./dist/extension.js",
   "icon": "resources/icon.png",
   "license": "MIT",

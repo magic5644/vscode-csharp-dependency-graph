@@ -9,8 +9,9 @@ suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', async function() {
-    this.timeout(10000); 
-    assert.ok(vscode.extensions.getExtension('vscode-csharp-dependency-graph'));
+    this.timeout(10000);
+    console.log('Available extensions:', vscode.extensions.all.map(ext => ext.id));
+    assert.ok(vscode.extensions.getExtension('magic5644.vscode-csharp-dependency-graph'));
   });
 
   test('Command should be registered', async function() {
