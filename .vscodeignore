@@ -10,3 +10,6 @@ tsconfig.json
 .github/**
 node_modules/**
 package-lock.json
+test-workspace/**
+resources/**
+extension/out/**

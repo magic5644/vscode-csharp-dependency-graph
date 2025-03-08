@@ -1,6 +1,6 @@
 {
   "name": "vscode-csharp-dependency-graph",
-  "displayName": "C# Dependency Graph",
+  "displayName": "C# Dependency Graph Generator",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
   "version": "0.1.0",
   "publisher": "magic5644",
