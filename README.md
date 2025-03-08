@@ -6,6 +6,10 @@
 
 Generate interactive dependency graphs for C# projects and classes directly from Visual Studio Code.
 
+## Change Log
+
+See [CHANGELOG.md](./CHANGELOG.md) for a list of changes in README.md
+
 ## Features
 
 - **Project-level dependency visualization**: See how your C# projects depend on each other

@@ -24,7 +24,6 @@ export function activate(context: vscode.ExtensionContext) {
         const includeNetVersion = config.get<boolean>('includeNetVersion', true);
         const excludeTestProjects = config.get<boolean>('excludeTestProjects', true);
         const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
-        const includeClassDependencies = config.get<boolean>('includeClassDependencies', false);
 
         // Ask the user for the type of graph to generate
         const graphType = await vscode.window.showQuickPick(
@@ -35,14 +34,19 @@ export function activate(context: vscode.ExtensionContext) {
           { placeHolder: 'Select the type of dependency graph to generate' }
         );
 
+        
         if (!graphType) {
           return; // User cancelled
         }
 
         const generateClassGraph = graphType.label === 'Class Dependencies';
+        let baseFilename = 'project-dependency-graph';
+        if (generateClassGraph) {
+          baseFilename = 'class-dependency-graph';
+        } 
 
         // Ask the user for a file path to save the graph
-        const defaultPath = path.join(workspaceFolder.uri.fsPath, 'dependency-graph.dot');
+        const defaultPath = path.join(workspaceFolder.uri.fsPath, `${baseFilename}.dot`);
         const saveUri = await vscode.window.showSaveDialog({
           defaultUri: vscode.Uri.file(defaultPath),
           filters: {
@@ -112,7 +116,8 @@ export function activate(context: vscode.ExtensionContext) {
                 progress.report({ message: `Generating .dot file with ${classDependencies.length} classes...` });
                 dotContent = generateDotFile(projects, {
                   includeNetVersion,
-                  includeClassDependencies: true
+                  includeClassDependencies: true,
+                  classDependencyColor: vscode.workspace.getConfiguration('csharp-dependency-graph').get('classDependencyColor') as string
                 }, classDependencies);
                 
                 // Log for debugging
@@ -123,7 +128,8 @@ export function activate(context: vscode.ExtensionContext) {
                 progress.report({ message: 'Class analysis failed, generating project-level graph instead...' });
                 dotContent = generateDotFile(projects, {
                   includeNetVersion, 
-                  includeClassDependencies: false
+                  includeClassDependencies: false,
+                  classDependencyColor: vscode.workspace.getConfiguration('csharp-dependency-graph').get('classDependencyColor') as string
                 });
               }
             } else {
@@ -131,7 +137,8 @@ export function activate(context: vscode.ExtensionContext) {
               progress.report({ message: 'Generating .dot file with project dependencies...' });
               dotContent = generateDotFile(projects, {
                 includeNetVersion,
-                includeClassDependencies: false
+                includeClassDependencies: false,
+                classDependencyColor: vscode.workspace.getConfiguration('csharp-dependency-graph').get('classDependencyColor') as string
               });
             }
 
