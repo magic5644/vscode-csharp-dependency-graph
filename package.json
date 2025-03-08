@@ -1,0 +1,112 @@
+{
+  "name": "vscode-csharp-dependency-graph",
+  "displayName": "C# Dependency Graph",
+  "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
+  "version": "0.1.0",
+  "publisher": "magic5644",
+  "author": {
+    "name": "Gildas Le Bournault"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Visualization",
+    "Programming Languages",
+    "Other"
+  ],
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
+  "pricing": "Free",
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "icon": "resources/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magic5644/vscode-csharp-dependency-graph"
+  },
+  "homepage": "https://github.com/magic5644/vscode-csharp-dependency-graph/main/readme.md",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-csharp-dependency-graph.generate-dependency-graph",
+        "title": "C#: Generate Dependency Graph"
+      }
+    ],
+    "configuration": {
+      "title": "C# Dependency Graph",
+      "properties": {
+        "csharpDependencyGraph.includeNetVersion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include target framework version in the graph nodes"
+        },
+        "csharpDependencyGraph.excludeTestProjects": {
+          "type": "boolean",
+          "default": true,
+          "description": "Exclude test projects from the dependency graph"
+        },
+        "csharpDependencyGraph.testProjectPatterns": {
+          "type": "array",
+          "default": [
+            "*Test*",
+            "*Tests*",
+            "*TestProject*"
+          ],
+          "description": "Glob patterns to identify test projects to exclude"
+        },
+        "csharpDependencyGraph.includeClassDependencies": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include class-level dependencies in the graph (more detailed but larger graph)"
+        },
+        "csharpDependencyGraph.excludeSourcePatterns": {
+          "type": "array",
+          "default": [
+            "**/obj/**",
+            "**/bin/**",
+            "**/Generated/**",
+            "**/node_modules/**"
+          ],
+          "description": "Glob patterns for source files to exclude from class dependency analysis"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^16.18.34",
+    "@types/vscode": "^1.80.0",
+    "@types/xml2js": "^0.4.11",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^8.57.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "ts-loader": "^9.4.3",
+    "typescript": "^5.1.3",
+    "webpack": "^5.85.0",
+    "webpack-cli": "^5.1.3"
+  },
+  "dependencies": {
+    "minimatch": "^9.0.1",
+    "xml2js": "^0.6.0"
+  }
+}

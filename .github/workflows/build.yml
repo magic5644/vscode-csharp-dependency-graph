@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+    - name: Install Dependencies
+      run: npm install
+    - name: Compile
+      run: npm run compile
+    - name: Run Tests
+      run: xvfb-run -a npm run test
+    - name: Package
+      run: npm run package
+    - name: Publish to VS Code Marketplace
+      if: github.ref == 'refs/heads/main'
+      run: |
+        npm install -g vsce
+        vsce publish -p ${{ secrets.VSCE_PAT }}
