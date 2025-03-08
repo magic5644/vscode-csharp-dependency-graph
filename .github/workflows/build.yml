@@ -27,6 +27,8 @@ jobs:
       run: npm run package
     - name: Publish to VS Code Marketplace
       if: github.ref == 'refs/heads/main'
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
       run: |
-        npm install -g vsce
-        vsce publish -p ${{ secrets.VSCE_PAT }}
+        npm install -g @vscode/vsce
+        vsce publish -p $VSCE_PAT

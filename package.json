@@ -20,7 +20,9 @@
     "theme": "dark"
   },
   "pricing": "Free",
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "icon": "resources/icon.png",
   "license": "MIT",
