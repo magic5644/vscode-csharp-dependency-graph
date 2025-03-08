@@ -7,3 +7,6 @@ test/**
 tsconfig.json
 **/*.map
 **/*.ts
+.github/**
+node_modules/**
+package-lock.json
