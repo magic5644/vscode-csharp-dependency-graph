@@ -25,8 +25,8 @@ jobs:
       run: xvfb-run -a npm run test
     - name: Package
       run: npm run package
-    # - name: Publish to VS Code Marketplace
-    #   if: github.ref == 'refs/heads/main'
-    #   run: |
-    #     npm install -g vsce
-    #     vsce publish -p ${{ secrets.VSCE_PAT }}
+    - name: Publish to VS Code Marketplace
+      if: github.ref == 'refs/heads/main'
+      run: |
+        npm install -g vsce
+        vsce publish -p ${{ secrets.VSCE_PAT }}
