@@ -4,6 +4,7 @@ import { ClassDependency } from './csharpClassParser';
 interface GraphOptions {
   includeNetVersion: boolean;
   includeClassDependencies: boolean;
+  classDependencyColor: string;
 }
 
 /**
@@ -59,8 +60,8 @@ function generateClassDependencyGraph(
   for (const project of projects) {
     dotContent += `  subgraph "cluster_${project.name}" {\n`;
     dotContent += `    label="${project.name}${options.includeNetVersion && project.targetFramework ? ' (' + project.targetFramework + ')' : ''}";\n`;
-    dotContent += '    style="filled";\n';
-    dotContent += '    color=lightgrey;\n\n';
+    dotContent += `    style="filled";\n`;
+    dotContent += `    color="${options.classDependencyColor}";\n\n`;
     
     // Add nodes for the classes of this project
     const projectClasses = classDependencies.filter(c => c.projectName === project.name);

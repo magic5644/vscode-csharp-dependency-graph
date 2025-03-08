@@ -2,7 +2,7 @@
   "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph Generator",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "magic5644",
   "author": {
     "name": "Gildas Le Bournault"
@@ -16,7 +16,7 @@
     "Other"
   ],
   "galleryBanner": {
-    "color": "#C80000",
+    "color": "#000000",
     "theme": "dark"
   },
   "pricing": "Free",
@@ -46,6 +46,11 @@
           "default": true,
           "description": "Include target framework version in the graph nodes"
         },
+        "csharpDependencyGraph.classDependencyColor": {
+          "type": "string",
+          "default": "lightgray",
+          "description": "Color for the class dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
+      },
         "csharpDependencyGraph.excludeTestProjects": {
           "type": "boolean",
           "default": true,
@@ -59,11 +64,6 @@
             "*TestProject*"
           ],
           "description": "Glob patterns to identify test projects to exclude"
-        },
-        "csharpDependencyGraph.includeClassDependencies": {
-          "type": "boolean",
-          "default": false,
-          "description": "Include class-level dependencies in the graph (more detailed but larger graph)"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
           "type": "array",
