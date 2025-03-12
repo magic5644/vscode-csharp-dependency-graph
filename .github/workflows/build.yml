@@ -1,14 +1,10 @@
 name: Build
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
+
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -25,10 +21,3 @@ jobs:
       run: xvfb-run -a npm run test
     - name: Package
       run: npm run package
-    - name: Publish to VS Code Marketplace
-      if: github.ref == 'refs/heads/main'
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
-      run: |
-        npm install -g @vscode/vsce
-        vsce publish -p $VSCE_PAT
