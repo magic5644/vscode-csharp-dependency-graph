@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as util from 'util';
 import { minimatch } from 'minimatch';
-import { parseSolutionFile } from './slnParser';
+import { parseSolutionFile, findSolutionFiles } from './slnParser';
 
 const readdir = util.promisify(fs.readdir);
 
@@ -96,33 +96,6 @@ export async function findCsprojFiles(
   
   await searchDirectory(directoryPath);
   return csprojFiles;
-}
-
-/**
- * Finds all .sln files in the given directory
- */
-async function findSolutionFiles(directoryPath: string): Promise<string[]> {
-  const slnFiles: string[] = [];
-  
-  async function searchDirectory(dir: string) {
-    const entries = await readdir(dir, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      
-      if (entry.isDirectory() && 
-          entry.name !== 'node_modules' && 
-          entry.name !== '.git' && 
-          !entry.name.startsWith('.')) {
-        await searchDirectory(fullPath);
-      } else if (entry.isFile() && entry.name.endsWith('.sln')) {
-        slnFiles.push(fullPath);
-      }
-    }
-  }
-  
-  await searchDirectory(directoryPath);
-  return slnFiles;
 }
 
 /**
