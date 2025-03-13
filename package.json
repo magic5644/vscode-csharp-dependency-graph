@@ -41,6 +41,11 @@
     "configuration": {
       "title": "C# Dependency Graph",
       "properties": {
+        "csharpDependencyGraph.useSolutionFile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use .sln files when found to identify projects in the solution structure"
+        },
         "csharpDependencyGraph.includeNetVersion": {
           "type": "boolean",
           "default": true,
@@ -50,7 +55,7 @@
           "type": "string",
           "default": "lightgray",
           "description": "Color for the class dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
-      },
+        },
         "csharpDependencyGraph.excludeTestProjects": {
           "type": "boolean",
           "default": true,

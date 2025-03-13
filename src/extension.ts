@@ -6,6 +6,8 @@ import { parseCsprojFiles } from './csprojParser';
 import { generateDotFile } from './graphGenerator';
 import { findCSharpSourceFiles } from './csharpSourceFinder';
 import { parseClassDependencies } from './csharpClassParser';
+import { findSolutionFiles, parseSolutionFile } from './slnParser';
+import { minimatch } from 'minimatch';
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
@@ -24,6 +26,45 @@ export function activate(context: vscode.ExtensionContext) {
         const includeNetVersion = config.get<boolean>('includeNetVersion', true);
         const excludeTestProjects = config.get<boolean>('excludeTestProjects', true);
         const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
+        const useSolutionFile = config.get<boolean>('useSolutionFile', true);
+
+        // Find solution files if enabled
+        let slnFiles: string[] = [];
+        if (useSolutionFile) {
+          slnFiles = await findSolutionFiles(workspaceFolder.uri.fsPath);
+        }
+
+        // Ask user to choose a solution file if multiple are found
+        let selectedSolutionFile: string | undefined;
+        if (slnFiles.length > 1) {
+          const slnOptions = slnFiles.map(file => ({
+            label: path.basename(file),
+            description: file,
+            file: file
+          }));
+          
+          const selection = await vscode.window.showQuickPick([
+            { label: 'Scan for all .csproj files', description: 'Find all projects by scanning directories', file: '' },
+            ...slnOptions
+          ], {
+            placeHolder: 'Select a solution file or scan for all projects'
+          });
+          
+          if (!selection) {
+            return; // User cancelled
+          }
+          
+          selectedSolutionFile = selection.file || undefined;
+        } else if (slnFiles.length === 1) {
+          // If only one solution file is found, ask if the user wants to use it
+          const useSlnFile = await vscode.window.showQuickPick(['Yes', 'No'], {
+            placeHolder: `Use solution file: ${path.basename(slnFiles[0])}?`
+          });
+          
+          if (useSlnFile === 'Yes') {
+            selectedSolutionFile = slnFiles[0];
+          }
+        }
 
         // Ask the user for the type of graph to generate
         const graphType = await vscode.window.showQuickPick(
@@ -68,12 +109,34 @@ export function activate(context: vscode.ExtensionContext) {
           },
           async (progress) => {
             // Find all .csproj files
-            progress.report({ message: 'Finding .csproj files...' });
-            const csprojFiles = await findCsprojFiles(
-              workspaceFolder.uri.fsPath,
-              excludeTestProjects,
-              testProjectPatterns
-            );
+            progress.report({ message: 'Finding project files...' });
+            
+            let csprojFiles: string[];
+            if (selectedSolutionFile) {
+              // If a solution file is selected, use that
+
+              csprojFiles = await parseSolutionFile(selectedSolutionFile);
+              
+              // Filter out test projects if needed
+              if (excludeTestProjects) {
+                csprojFiles = csprojFiles.filter(filePath => {
+                  const fileName = path.basename(filePath);
+                  return !testProjectPatterns.some(pattern => 
+                    pattern.includes('/') ? 
+                      minimatch(filePath, pattern) : 
+                      minimatch(fileName, pattern)
+                  );
+                });
+              }
+            } else {
+              // Otherwise search for all .csproj files
+              csprojFiles = await findCsprojFiles(
+                workspaceFolder.uri.fsPath,
+                excludeTestProjects,
+                testProjectPatterns,
+                false // Don't use solution file since we already checked
+              );
+            }
             
             if (csprojFiles.length === 0) {
               throw new Error('No .csproj files found in the workspace');

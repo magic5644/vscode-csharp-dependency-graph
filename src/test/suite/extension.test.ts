@@ -2,6 +2,8 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
+import { parseSolutionFile } from '../../slnParser';
+import { findCsprojFiles } from '../../csprojFinder';
 
 // You can use test suites to group tests
 suite('Extension Test Suite', () => {
@@ -25,6 +27,40 @@ suite('Extension Test Suite', () => {
               commands.includes('csharpDependencyGraph.generate') ||
               commands.includes('vscode-csharp-dependency-graph') ||
               commands.includes('extension.generateCSharpDependencyGraph'));
+  });
+
+  test('Solution file parser should integrate with csproj finder', async function() {
+    this.timeout(10000);
+    
+    // Path to the test workspace
+    const testWorkspace = path.resolve(__dirname, '../../../test-workspace');
+    
+    // Find the solution file directly
+    const slnPath = path.join(testWorkspace, 'TestSolution.sln');
+    const projectPathsFromSln = await parseSolutionFile(slnPath);
+    
+    assert.ok(projectPathsFromSln.length >= 2, 'Solution should have at least 2 projects');
+    
+    // Now use the findCsprojFiles with solution file support
+    const projectPathsFromFinder = await findCsprojFiles(
+      testWorkspace,
+      false, // Don't exclude test projects
+      ["*Test*", "*Tests*", "*TestProject*"],
+      true // Use solution file
+    );
+    
+    assert.ok(
+      projectPathsFromFinder.length >= projectPathsFromSln.length,
+      'Project finder with solution support should find at least the same number of projects'
+    );
+
+    // Make sure all solution projects are found by the finder
+    for (const slnProject of projectPathsFromSln) {
+      assert.ok(
+        projectPathsFromFinder.some(p => path.normalize(p) === path.normalize(slnProject)),
+        `Project ${slnProject} from solution should be found by project finder`
+      );
+    }
   });
   
   // // Basic test to check if the command can execute
