@@ -1,9 +1,9 @@
 # Test Workspace
 
-Ce dossier contient des projets C# simples pour tester l'extension VS Code C# Dependency Graph.
+This folder contains simple C# projects to test the VS Code C# Dependency Graph extension.
 
 Structure:
-- ProjectA (référence ProjectB et ProjectC)
-- ProjectB (référence ProjectC)
-- ProjectC (pas de références)
-- TestProject (référence ProjectA - devrait être exclu lors du test)
+- ProjectA (references ProjectB and ProjectC)
+- ProjectB (references ProjectC)
+- ProjectC (no references)
+- TestProject (references ProjectA - should be excluded during testing)
