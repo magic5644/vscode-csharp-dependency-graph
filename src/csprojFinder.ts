@@ -37,7 +37,7 @@ export async function findCsprojFiles(
       // Filter out test projects if needed
       if (excludeTestProjects) {
         csprojFiles = projectPaths.filter(path => {
-          const fileName = path.split(/[\\/]/).pop() || '';
+          const fileName = path.split(/[\\/]/).pop() ?? '';
           return !testProjectPatterns.some(pattern => minimatch(fileName, pattern));
         });
       } else {
