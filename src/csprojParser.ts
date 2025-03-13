@@ -26,7 +26,7 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
       // Use promise-based parsing properly
       const result = await parser.parseStringPromise(content);
       
-      if (!result || !result.Project) {
+      if (!result?.Project) {
         continue;
       }
       
@@ -35,36 +35,10 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
       const dependencies: string[] = [];
       
       // Extract target framework
-      if (result.Project.PropertyGroup && Array.isArray(result.Project.PropertyGroup)) {
-        for (const group of result.Project.PropertyGroup) {
-          if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
-            targetFramework = String(group.TargetFramework[0]);
-            break;
-          } else if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
-            // Use first of multiple target frameworks
-            const frameworks = String(group.TargetFrameworks[0]).split(';');
-            if (frameworks.length > 0) {
-              targetFramework = frameworks[0];
-            }
-            break;
-          }
-        }
-      }
+      targetFramework = extractTargetFramework(result, targetFramework);
       
       // Extract project references
-      if (result.Project.ItemGroup && Array.isArray(result.Project.ItemGroup)) {
-        for (const group of result.Project.ItemGroup) {
-          if (group.ProjectReference && Array.isArray(group.ProjectReference)) {
-            for (const reference of group.ProjectReference) {
-              if (reference && reference.$ && reference.$.Include) {
-                const refPath = String(reference.$.Include);
-                const refName = path.basename(refPath, '.csproj');
-                dependencies.push(refName);
-              }
-            }
-          }
-        }
-      }
+      extractProjectReferences(result, dependencies);
       
       projects.push({
         name: projectName,
@@ -78,4 +52,51 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
   }
   
   return projects;
+}
+
+function extractTargetFramework(result: any, targetFramework: string) {
+  if (result.Project.PropertyGroup && Array.isArray(result.Project.PropertyGroup)) {
+    for (const group of result.Project.PropertyGroup) {
+      if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
+        targetFramework = String(group.TargetFramework[0]);
+        break;
+      } else if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
+        // Use first of multiple target frameworks
+        const frameworks = String(group.TargetFrameworks[0]).split(';');
+        if (frameworks.length > 0) {
+          targetFramework = frameworks[0];
+        }
+        break;
+      }
+    }
+  }
+  return targetFramework;
+}
+
+function extractProjectReferences(result: any, dependencies: string[]) {
+  // Early return if no item groups
+  const itemGroups = result?.Project?.ItemGroup;
+  if (!itemGroups || !Array.isArray(itemGroups)) {
+    return;
+  }
+
+  // Process each item group
+  for (const group of itemGroups) {
+    addProjectReferencesFromGroup(group, dependencies);
+  }
+}
+
+function addProjectReferencesFromGroup(group: any, dependencies: string[]) {
+  const projectRefs = group?.ProjectReference;
+  if (!projectRefs || !Array.isArray(projectRefs)) {
+    return;
+  }
+
+  for (const reference of projectRefs) {
+    const includePath = reference?.$.Include;
+    if (includePath) {
+      const refName = path.basename(String(includePath), '.csproj');
+      dependencies.push(refName);
+    }
+  }
 }
