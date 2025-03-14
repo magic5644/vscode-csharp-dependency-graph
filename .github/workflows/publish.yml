@@ -60,3 +60,10 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           vsce publish -p $VSCE_PAT
+
+      - name: Publish artifact
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "vscode-csharp-dependency-graph-0.2.0-*"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
