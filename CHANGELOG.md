@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.3.0] - 2025-03-14
+## [0.4.0] - 2025-03-14
 
 - **Added** support for solution (.sln) files to correctly identify all projects in the solution structure
 - **Fixed** issue where test projects were not being excluded from the dependency graph
