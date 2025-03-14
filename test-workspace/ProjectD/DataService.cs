@@ -6,7 +6,7 @@ using System.Reflection;
 // Licensed under the MIT License.
 
 
-namespace ProjectB
+namespace ProjectD
 {
     public class DataService
     {

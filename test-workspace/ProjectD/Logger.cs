@@ -1,12 +1,8 @@
-using System;
-using System.Runtime.InteropServices;
-using System.Reflection;
-
 // Copyright (c) 2023 Your Company. All rights reserved.
 // Licensed under the MIT License.
 
 
-namespace ProjectB
+namespace ProjectD
 {
     public class Logger
     {
