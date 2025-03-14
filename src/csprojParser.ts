@@ -95,7 +95,18 @@ function addProjectReferencesFromGroup(group: any, dependencies: string[]) {
   for (const reference of projectRefs) {
     const includePath = reference?.$.Include;
     if (includePath) {
-      const refName = path.basename(String(includePath), '.csproj');
+      // Convert string and replace backslashes with forward slashes
+      const normalizedPath = String(includePath).replace(/\\/g, '/');
+      
+      // Extract the last part of the path (the filename with extension)
+      const lastPathPart = normalizedPath.split('/').pop() || '';
+      
+      // Remove the extension to get just the project name
+      const refName = lastPathPart.replace(/\.csproj$/i, '');
+      
+      // Debug log for troubleshooting
+      console.log(`Original: ${includePath}, Extracted: ${refName}`);
+      
       dependencies.push(refName);
     }
   }

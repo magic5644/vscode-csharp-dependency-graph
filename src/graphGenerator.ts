@@ -83,12 +83,12 @@ function generateClassDependencyGraph(
       // Try to find the target class in all classes
       // First, search in the same project
       let targetClass = classDependencies.find(
-        c => c.projectName === classInfo.projectName && c.className === dependency
+        c => c.projectName === classInfo.projectName && c.className === dependency.className && c.namespace === dependency.namespace
       );
       
       // If not found, search in all projects
       if (!targetClass) {
-        targetClass = classDependencies.find(c => c.className === dependency);
+        targetClass = classDependencies.find(c => c.className === dependency.className && c.namespace === dependency.namespace);
       }
       
       if (targetClass) {
