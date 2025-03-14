@@ -165,7 +165,11 @@ classDiagram
 
 ### Next Release
 
-- Added support for solution (.sln) files to correctly identify all projects in the solution structure
+### 0.3.0
+
+- **Added** support for solution (.sln) files to correctly identify all projects in the solution structure
+- **Fixed** issue where test projects were not being excluded from the dependency graph
+- **Fixed** issue when some class dependencies were not being correctly identified
 
 ### 0.2.0
 
