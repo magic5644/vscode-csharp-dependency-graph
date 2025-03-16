@@ -12,6 +12,33 @@ export interface Project {
   dependencies: string[];
 }
 
+// Add interfaces for XML structure
+interface CsprojXml {
+  Project: {
+    PropertyGroup?: PropertyGroup[];
+    ItemGroup?: ItemGroup[];
+    [key: string]: unknown;
+  };
+}
+
+interface PropertyGroup {
+  TargetFramework?: string[];
+  TargetFrameworks?: string[];
+  [key: string]: unknown;
+}
+
+interface ItemGroup {
+  ProjectReference?: ProjectReference[];
+  [key: string]: unknown;
+}
+
+interface ProjectReference {
+  $: {
+    Include: string;
+    [key: string]: unknown;
+  };
+}
+
 /**
  * Parses .csproj files to extract project names and dependencies
  */
@@ -54,7 +81,7 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
   return projects;
 }
 
-function extractTargetFramework(result: any, targetFramework: string) {
+function extractTargetFramework(result: CsprojXml, targetFramework: string): string {
   if (result.Project.PropertyGroup && Array.isArray(result.Project.PropertyGroup)) {
     for (const group of result.Project.PropertyGroup) {
       if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
@@ -73,7 +100,7 @@ function extractTargetFramework(result: any, targetFramework: string) {
   return targetFramework;
 }
 
-function extractProjectReferences(result: any, dependencies: string[]) {
+function extractProjectReferences(result: CsprojXml, dependencies: string[]): void {
   // Early return if no item groups
   const itemGroups = result?.Project?.ItemGroup;
   if (!itemGroups || !Array.isArray(itemGroups)) {
@@ -86,7 +113,7 @@ function extractProjectReferences(result: any, dependencies: string[]) {
   }
 }
 
-function addProjectReferencesFromGroup(group: any, dependencies: string[]) {
+function addProjectReferencesFromGroup(group: ItemGroup, dependencies: string[]): void {
   const projectRefs = group?.ProjectReference;
   if (!projectRefs || !Array.isArray(projectRefs)) {
     return;
@@ -99,14 +126,11 @@ function addProjectReferencesFromGroup(group: any, dependencies: string[]) {
       const normalizedPath = String(includePath).replace(/\\/g, '/');
       
       // Extract the last part of the path (the filename with extension)
-      const lastPathPart = normalizedPath.split('/').pop() || '';
+      const lastPathPart = normalizedPath.split('/').pop() ?? '';
       
       // Remove the extension to get just the project name
       const refName = lastPathPart.replace(/\.csproj$/i, '');
-      
-      // Debug log for troubleshooting
-      console.log(`Original: ${includePath}, Extracted: ${refName}`);
-      
+            
       dependencies.push(refName);
     }
   }

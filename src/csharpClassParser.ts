@@ -199,67 +199,12 @@ function resolveDependencies(
       continue;
     }
     
-    let dependencyInfo: DependencyInfo | null = null;
-    
-    // Already fully qualified
-    if (baseType.includes('.')) {
-      const parts = baseType.split('.');
-      const className = parts.pop() || '';
-      const namespace = parts.join('.');
-      
-      // Try to find in registry
-      if (classRegistry.has(baseType)) {
-        const info = classRegistry.get(baseType)!;
-        dependencyInfo = {
-          className,
-          namespace: info.namespace,
-          projectName: info.projectName
-        };
-      } else {
-        // External dependency
-        dependencyInfo = {
-          className,
-          namespace,
-          projectName: 'external'
-        };
-      }
-    } else {
-      // Try in current namespace first
-      const fullName = currentNamespace ? `${currentNamespace}.${baseType}` : baseType;
-      if (classRegistry.has(fullName)) {
-        const info = classRegistry.get(fullName)!;
-        dependencyInfo = {
-          className: baseType,
-          namespace: info.namespace,
-          projectName: info.projectName
-        };
-      } else {
-        // Try with using directives
-        let found = false;
-        for (const imp of imports) {
-          const qualifiedName = `${imp}.${baseType}`;
-          if (classRegistry.has(qualifiedName)) {
-            const info = classRegistry.get(qualifiedName)!;
-            dependencyInfo = {
-              className: baseType,
-              namespace: imp,
-              projectName: info.projectName
-            };
-            found = true;
-            break;
-          }
-        }
-        
-        // If still not found, add as external dependency
-        if (!found && baseType) {
-          dependencyInfo = {
-            className: baseType,
-            namespace: 'unknown',
-            projectName: 'external'
-          };
-        }
-      }
-    }
+    const dependencyInfo = resolveClassDependency(
+      baseType, 
+      currentNamespace, 
+      imports, 
+      classRegistry
+    );
     
     if (dependencyInfo) {
       resolved.add(baseType);
@@ -268,6 +213,117 @@ function resolveDependencies(
   }
   
   return resolvedDependencies;
+}
+
+/**
+ * Resolves a single class dependency
+ */
+function resolveClassDependency(
+  baseType: string,
+  currentNamespace: string,
+  imports: string[],
+  classRegistry: Map<string, { namespace: string, projectName: string }>
+): DependencyInfo | null {
+  // Check if it's a fully qualified name
+  if (baseType.includes('.')) {
+    return resolveFullyQualifiedName(baseType, classRegistry);
+  }
+  
+  // Try to resolve with current namespace
+  const fromCurrentNamespace = resolveWithNamespace(baseType, currentNamespace, classRegistry);
+  if (fromCurrentNamespace) {
+    return fromCurrentNamespace;
+  }
+  
+  // Try to resolve with imports
+  const fromImports = resolveWithImports(baseType, imports, classRegistry);
+  if (fromImports) {
+    return fromImports;
+  }
+  
+  // Default to external dependency if we have a valid type
+  if (baseType) {
+    return {
+      className: baseType,
+      namespace: 'unknown',
+      projectName: 'external'
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Resolves a fully qualified class name
+ */
+function resolveFullyQualifiedName(
+  fullName: string,
+  classRegistry: Map<string, { namespace: string, projectName: string }>
+): DependencyInfo {
+  const parts = fullName.split('.');
+  const className = parts.pop() ?? '';
+  const namespace = parts.join('.');
+  
+  // Try to find in registry
+  if (classRegistry.has(fullName)) {
+    const info = classRegistry.get(fullName)!;
+    return {
+      className,
+      namespace: info.namespace,
+      projectName: info.projectName
+    };
+  }
+  
+  // External dependency
+  return {
+    className,
+    namespace,
+    projectName: 'external'
+  };
+}
+
+/**
+ * Tries to resolve a class name using the current namespace
+ */
+function resolveWithNamespace(
+  baseType: string,
+  currentNamespace: string,
+  classRegistry: Map<string, { namespace: string, projectName: string }>
+): DependencyInfo | null {
+  const fullName = currentNamespace ? `${currentNamespace}.${baseType}` : baseType;
+  if (!classRegistry.has(fullName)) {
+    return null;
+  }
+  
+  const info = classRegistry.get(fullName)!;
+  return {
+    className: baseType,
+    namespace: info.namespace,
+    projectName: info.projectName
+  };
+}
+
+/**
+ * Tries to resolve a class name using import statements
+ */
+function resolveWithImports(
+  baseType: string,
+  imports: string[],
+  classRegistry: Map<string, { namespace: string, projectName: string }>
+): DependencyInfo | null {
+  for (const imp of imports) {
+    const qualifiedName = `${imp}.${baseType}`;
+    if (classRegistry.has(qualifiedName)) {
+      const info = classRegistry.get(qualifiedName)!;
+      return {
+        className: baseType,
+        namespace: imp,
+        projectName: info.projectName
+      };
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -384,7 +440,7 @@ function findStaticCalls(content: string, dependencies: DependencyInfo[]) {
 /**
  * Finds all types in variable declarations, parameters, and method returns
  */
-function findAllTypes(content: string, dependencies: DependencyInfo[]) {
+function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
   // Split into lines to simplify analysis
   const lines = content.split('\n');
   
@@ -392,46 +448,95 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]) {
     // Skip comments
     if (line.trim().startsWith('//')) continue;
     
-    // Variable and field declarations
-    // Improved to handle more complex declarations and generics
-    const declarationRegex = /^\s*(public|private|protected|internal|const|readonly|static)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*[=;{(]/;
-    const declMatch = declarationRegex.exec(line);
-    if (declMatch?.[2]) {
-      const type = declMatch[2].trim();
-      if (!isPrimitiveType(type)) {
-        dependencies.push({
-          className: type,
-          namespace: 'unknown',
-          projectName: 'external'
-        });
-      }
-    }
-    
-    // Method parameters and return types
-    const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*\((.*)\)/;
-    const methodMatch = methodRegex.exec(line);
-    if (methodMatch) {
-      // Return type
-      const returnType = methodMatch[2].trim();
-      if (returnType !== 'void' && !isPrimitiveType(returnType)) {
-        dependencies.push({ className: returnType, namespace: 'unknown', projectName: 'external' });
-      }
-      
-      // Parameters
-      const params = methodMatch[3];
-      if (params) {
-        const paramParts = splitByTopLevelCommas(params);
-        for (const param of paramParts) {
-          const paramParts = param.trim().split(' ');
-          if (paramParts.length >= 2) {
-            const paramType = paramParts[0].trim();
-            if (!isPrimitiveType(paramType)) {
-              dependencies.push({className: paramType, namespace: 'unknown', projectName: 'external'});
-            }
-          }
-        }
-      }
-    }
+    processVariableDeclaration(line, dependencies);
+    processMethodSignature(line, dependencies);
+  }
+}
+
+/**
+ * Process variable and field declarations in a line
+ */
+function processVariableDeclaration(line: string, dependencies: DependencyInfo[]): void {
+  const declarationRegex = /^\s*(public|private|protected|internal|const|readonly|static)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*[=;{(]/;
+  const declMatch = declarationRegex.exec(line);
+  
+  if (!declMatch?.[2]) {
+    return;
+  }
+  
+  const type = declMatch[2].trim();
+  if (!isPrimitiveType(type)) {
+    dependencies.push({
+      className: type,
+      namespace: 'unknown',
+      projectName: 'external'
+    });
+  }
+}
+
+/**
+ * Process method signatures to extract return type and parameters
+ */
+function processMethodSignature(line: string, dependencies: DependencyInfo[]): void {
+  const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*\((.*)\)/;
+  const methodMatch = methodRegex.exec(line);
+  
+  if (!methodMatch) {
+    return;
+  }
+  
+  processReturnType(methodMatch[2], dependencies);
+  processParameters(methodMatch[3], dependencies);
+}
+
+/**
+ * Process a method's return type
+ */
+function processReturnType(returnType: string, dependencies: DependencyInfo[]): void {
+  const trimmedType = returnType.trim();
+  
+  if (trimmedType !== 'void' && !isPrimitiveType(trimmedType)) {
+    dependencies.push({ 
+      className: trimmedType, 
+      namespace: 'unknown', 
+      projectName: 'external' 
+    });
+  }
+}
+
+/**
+ * Process method parameters
+ */
+function processParameters(params: string, dependencies: DependencyInfo[]): void {
+  if (!params) {
+    return;
+  }
+  
+  const paramParts = splitByTopLevelCommas(params);
+  
+  for (const param of paramParts) {
+    addParameterTypeDependency(param, dependencies);
+  }
+}
+
+/**
+ * Add a parameter's type as a dependency if applicable
+ */
+function addParameterTypeDependency(param: string, dependencies: DependencyInfo[]): void {
+  const paramParts = param.trim().split(' ');
+  
+  if (paramParts.length < 2) {
+    return;
+  }
+  
+  const paramType = paramParts[0].trim();
+  
+  if (!isPrimitiveType(paramType)) {
+    dependencies.push({
+      className: paramType, 
+      namespace: 'unknown', 
+      projectName: 'external'
+    });
   }
 }
 
