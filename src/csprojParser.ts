@@ -130,10 +130,7 @@ function addProjectReferencesFromGroup(group: ItemGroup, dependencies: string[])
       
       // Remove the extension to get just the project name
       const refName = lastPathPart.replace(/\.csproj$/i, '');
-      
-      // Debug log for troubleshooting
-      console.log(`Original: ${includePath}, Extracted: ${refName}`);
-      
+            
       dependencies.push(refName);
     }
   }
