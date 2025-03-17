@@ -9,6 +9,23 @@ import { parseClassDependencies } from './csharpClassParser';
 import { findSolutionFiles, parseSolutionFile } from './slnParser';
 import { minimatch } from 'minimatch';
 
+/**
+ * Checks if a file path matches a given pattern
+ */
+function isPathMatchingPattern(filePath: string, pattern: string): boolean {
+  const fileName = path.basename(filePath);
+  return pattern.includes('/') ? 
+    minimatch(filePath, pattern) : 
+    minimatch(fileName, pattern);
+}
+
+/**
+ * Checks if a file path matches any of the provided patterns
+ */
+function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean {
+  return patterns.some(pattern => isPathMatchingPattern(filePath, pattern));
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     'vscode-csharp-dependency-graph.generate-dependency-graph',
@@ -119,14 +136,9 @@ export function activate(context: vscode.ExtensionContext) {
               
               // Filter out test projects if needed
               if (excludeTestProjects) {
-                csprojFiles = csprojFiles.filter(filePath => {
-                  const fileName = path.basename(filePath);
-                  return !testProjectPatterns.some(pattern => 
-                    pattern.includes('/') ? 
-                      minimatch(filePath, pattern) : 
-                      minimatch(fileName, pattern)
-                  );
-                });
+                csprojFiles = csprojFiles.filter(filePath => 
+                  !isPathMatchingAnyPattern(filePath, testProjectPatterns)
+                );
               }
             } else {
               // Otherwise search for all .csproj files
