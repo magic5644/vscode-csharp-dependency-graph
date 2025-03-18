@@ -5,6 +5,8 @@ interface GraphOptions {
   includeNetVersion: boolean;
   includeClassDependencies: boolean;
   classDependencyColor: string;
+  includePackageDependencies?: boolean; // Add this option
+  packageNodeColor?: string; // Add this for styling
 }
 
 /**
@@ -32,13 +34,42 @@ export function generateDotFile(
     
     dotContent += `  "${project.name}" [label="${label}"];\n`;
   }
-  
+
+  // Add package nodes if enabled
+  if (options.includePackageDependencies) {
+    // Collect all unique packages across projects
+    const uniquePackages = new Set<string>();
+    
+    for (const project of projects) {
+      for (const pkg of project.packageDependencies) {
+        uniquePackages.add(pkg.name);
+      }
+    }
+    
+    // Create nodes for packages
+    dotContent += '\n  // Package nodes\n';
+    for (const packageName of uniquePackages) {
+      dotContent += `  "${packageName}" [label="${packageName}", shape=ellipse, style=filled, fillcolor="${options.packageNodeColor || '#ffcccc'}"];\n`;
+    }
+  }
+
   dotContent += '\n';
-  
-  // Define edges
+
+  // Define edges for project references
+  dotContent += '  // Project reference edges\n';
   for (const project of projects) {
     for (const dependency of project.dependencies) {
       dotContent += `  "${project.name}" -> "${dependency}";\n`;
+    }
+  }
+
+  // Define edges for package references
+  if (options.includePackageDependencies) {
+    dotContent += '\n  // Package reference edges\n';
+    for (const project of projects) {
+      for (const pkg of project.packageDependencies) {
+        dotContent += `  "${project.name}" -> "${pkg.name}" [style=dashed];\n`;
+      }
     }
   }
   

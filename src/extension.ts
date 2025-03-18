@@ -192,7 +192,9 @@ export function activate(context: vscode.ExtensionContext) {
                 dotContent = generateDotFile(projects, {
                   includeNetVersion,
                   includeClassDependencies: true,
-                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string
+                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
+                  includePackageDependencies: true,
+                  packageNodeColor: '#ffcccc'
                 }, classDependencies);
                 
                 // Log for debugging
@@ -204,7 +206,9 @@ export function activate(context: vscode.ExtensionContext) {
                 dotContent = generateDotFile(projects, {
                   includeNetVersion, 
                   includeClassDependencies: false,
-                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string
+                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
+                  includePackageDependencies: true,
+                  packageNodeColor: '#ffcccc'
                 });
               }
             } else {
@@ -213,7 +217,9 @@ export function activate(context: vscode.ExtensionContext) {
               dotContent = generateDotFile(projects, {
                 includeNetVersion,
                 includeClassDependencies: false,
-                classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string
+                classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
+                includePackageDependencies: true,
+                packageNodeColor: '#ffcccc'
               });
             }
 

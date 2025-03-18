@@ -10,6 +10,7 @@ export interface Project {
   path: string;
   targetFramework: string;
   dependencies: string[];
+  packageDependencies: PackageReference[];
 }
 
 // Add interfaces for XML structure
@@ -39,11 +40,17 @@ interface ProjectReference {
   };
 }
 
+export interface PackageReference {
+  name: string;
+  version: string;
+}
+
 /**
  * Parses .csproj files to extract project names and dependencies
  */
 export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> {
   const projects: Project[] = [];
+  const packageDependencies: PackageReference[] = [];
   
   for (const filePath of filePaths) {
     try {
@@ -65,13 +72,14 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
       targetFramework = extractTargetFramework(result, targetFramework);
       
       // Extract project references
-      extractProjectReferences(result, dependencies);
+      extractProjectReferences(result, dependencies, packageDependencies);
       
       projects.push({
         name: projectName,
         path: filePath,
         targetFramework,
-        dependencies
+        dependencies,
+        packageDependencies
       });
     } catch (error) {
       console.error(`Failed to parse ${filePath}:`, error);
@@ -100,7 +108,7 @@ function extractTargetFramework(result: CsprojXml, targetFramework: string): str
   return targetFramework;
 }
 
-function extractProjectReferences(result: CsprojXml, dependencies: string[]): void {
+function extractProjectReferences(result: CsprojXml, dependencies: string[], packageDependencies: PackageReference[]): void {
   // Early return if no item groups
   const itemGroups = result?.Project?.ItemGroup;
   if (!itemGroups || !Array.isArray(itemGroups)) {
@@ -110,6 +118,7 @@ function extractProjectReferences(result: CsprojXml, dependencies: string[]): vo
   // Process each item group
   for (const group of itemGroups) {
     addProjectReferencesFromGroup(group, dependencies);
+    addPackageReferencesFromGroup(group, packageDependencies);
   }
 }
 
@@ -132,6 +141,25 @@ function addProjectReferencesFromGroup(group: ItemGroup, dependencies: string[])
       const refName = lastPathPart.replace(/\.csproj$/i, '');
             
       dependencies.push(refName);
+    }
+  }
+}
+
+function addPackageReferencesFromGroup(group: ItemGroup, packageDependencies: PackageReference[]): void {
+  const packageRefs = group?.PackageReference;
+  if (!packageRefs || !Array.isArray(packageRefs)) {
+    return;
+  }
+
+  for (const reference of packageRefs) {
+    const packageName = reference?.$.Include;
+    const packageVersion = reference?.$.Version || 'unknown';
+    
+    if (packageName) {
+      packageDependencies.push({
+        name: String(packageName),
+        version: String(packageVersion)
+      });
     }
   }
 }
