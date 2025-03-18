@@ -1,5 +1,5 @@
 import * as path from 'path';
-import Mocha from 'mocha'; // Correction: import direct au lieu de namespace
+import Mocha from 'mocha'; // Correction: direct import instead of namespace
 import { glob } from 'glob';
 
 export async function run(): Promise<void> {
@@ -19,7 +19,7 @@ export async function run(): Promise<void> {
 
   // Run the mocha test
   return new Promise<void>((resolve, reject) => {
-    mocha.run((failures: number) => { // Correction: ajout du type explicite
+    mocha.run((failures: number) => { // Correction: added explicit type
       if (failures > 0) {
         reject(new Error(`${failures} tests failed.`));
       } else {
