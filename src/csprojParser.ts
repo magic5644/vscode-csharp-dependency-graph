@@ -50,9 +50,8 @@ export interface PackageReference {
  */
 export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> {
   const projects: Project[] = [];
-  const packageDependencies: PackageReference[] = [];
-  
   for (const filePath of filePaths) {
+    const packageDependencies: PackageReference[] = [];
     try {
       const content = await readFile(filePath, 'utf8');
       const parser = new xml2js.Parser();
