@@ -41,9 +41,12 @@ export function activate(context: vscode.ExtensionContext) {
         // Get configuration settings
         const config = vscode.workspace.getConfiguration('csharpDependencyGraph');
         const includeNetVersion = config.get<boolean>('includeNetVersion', true);
+        const includePackageDependencies = config.get<boolean>('includePackageDependenciesInProjectGraph', true);
         const excludeTestProjects = config.get<boolean>('excludeTestProjects', true);
         const testProjectPatterns = config.get<string[]>('testProjectPatterns', ["*Test*", "*Tests*", "*TestProject*"]);
         const useSolutionFile = config.get<boolean>('useSolutionFile', true);
+        const classDependencyColor = config.get<string>('classDependencyColor', 'lightgray');
+        const packageNodeColor = config.get<string>('packageDependencyColor', '#ffcccc');
 
         // Find solution files if enabled
         let slnFiles: string[] = [];
@@ -192,9 +195,9 @@ export function activate(context: vscode.ExtensionContext) {
                 dotContent = generateDotFile(projects, {
                   includeNetVersion,
                   includeClassDependencies: true,
-                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
-                  includePackageDependencies: true,
-                  packageNodeColor: '#ffcccc'
+                  classDependencyColor,
+                  includePackageDependencies,
+                  packageNodeColor
                 }, classDependencies);
                 
                 // Log for debugging
@@ -206,9 +209,9 @@ export function activate(context: vscode.ExtensionContext) {
                 dotContent = generateDotFile(projects, {
                   includeNetVersion, 
                   includeClassDependencies: false,
-                  classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
-                  includePackageDependencies: true,
-                  packageNodeColor: '#ffcccc'
+                  classDependencyColor,
+                  includePackageDependencies,
+                  packageNodeColor
                 });
               }
             } else {
@@ -217,9 +220,9 @@ export function activate(context: vscode.ExtensionContext) {
               dotContent = generateDotFile(projects, {
                 includeNetVersion,
                 includeClassDependencies: false,
-                classDependencyColor: vscode.workspace.getConfiguration('csharpDependencyGraph').get('classDependencyColor') as string,
-                includePackageDependencies: true,
-                packageNodeColor: '#ffcccc'
+                classDependencyColor,
+                includePackageDependencies,
+                packageNodeColor
               });
             }
 

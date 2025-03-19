@@ -51,10 +51,20 @@
           "default": true,
           "description": "Include target framework version in the graph nodes"
         },
+        "csharpDependencyGraph.includePackageDependenciesInProjectGraph": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include NuGet package dependencies in the project dependency graph"
+        },
         "csharpDependencyGraph.classDependencyColor": {
           "type": "string",
           "default": "lightgray",
-          "description": "Color for the class dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
+          "description": "Color for the classes in class dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
+        },
+        "csharpDependencyGraph.packageDependencyColor": {
+          "type": "string",
+          "default": "#ffcccc",
+          "description": "Color for the packages in project dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.excludeTestProjects": {
           "type": "boolean",
