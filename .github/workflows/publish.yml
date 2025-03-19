@@ -64,6 +64,6 @@ jobs:
       - name: Publish artifact
         uses: softprops/action-gh-release@v2
         with:
-          files: "vscode-csharp-dependency-graph-0.2.0-*"
+          files: "vscode-csharp-dependency-graph-*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
