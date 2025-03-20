@@ -12,4 +12,5 @@ node_modules/**
 package-lock.json
 test-workspace/**
 extension/out/**
-resources/**
+resources/*.gif
+resources/*.png
