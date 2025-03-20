@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0] - 2025-03-20
+
+- **Updated** Refactor dependency resolution and enhance .csproj parsing
+- **Added** Add utility functions for pattern matching in dependency filtering
+- **Added** Add support of package dependencies in project graph
+- **Added** Add colors properties in settings
+- **Updated** Enhance csprojParser for package dependencies and improve tests
+- **Updated** Update package dependencies and enhance configuration options for package dependency inclusion in project graph
+
 ## [0.4.0] - 2025-03-14
 
 - **Added** support for solution (.sln) files to correctly identify all projects in the solution structure
