@@ -8,6 +8,8 @@ import { findCSharpSourceFiles } from './csharpSourceFinder';
 import { parseClassDependencies } from './csharpClassParser';
 import { findSolutionFiles, parseSolutionFile } from './slnParser';
 import { minimatch } from 'minimatch';
+import { GraphPreviewProvider } from './graphPreview';
+import { prepareVizJs } from './vizInitializer';
 
 /**
  * Checks if a file path matches a given pattern
@@ -26,7 +28,16 @@ function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean
   return patterns.some(pattern => isPathMatchingPattern(filePath, pattern));
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  // Prepare Viz.js for preview
+  try {
+    await prepareVizJs(context.extensionUri);
+  } catch (error) {
+    console.error('Error initializing Viz.js:', error);
+    vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
+  }
+
+  const graphPreviewProvider = new GraphPreviewProvider(context.extensionUri);
   const disposable = vscode.commands.registerCommand(
     'vscode-csharp-dependency-graph.generate-dependency-graph',
     async () => {
@@ -235,10 +246,14 @@ export function activate(context: vscode.ExtensionContext) {
           (filePath) => {
             vscode.window.showInformationMessage(
               `Dependency graph saved to ${filePath}`,
-              'Open File'
+              'Open File', 'Preview'
             ).then(selection => {
               if (selection === 'Open File') {
                 vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath));
+              }else if (selection === 'Preview') {
+                const dotContent = fs.readFileSync(filePath, 'utf8');
+                const title = path.basename(filePath);
+                graphPreviewProvider.showPreview(dotContent, title);
               }
             });
           },
