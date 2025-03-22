@@ -117,6 +117,10 @@
         {
           "when": "editorLangId == dot",
           "command": "csharp-dependency-graph.previewGraphviz",
+          "icon": {
+            "light": "resources/icon-light.svg",
+            "dark": "resources/icon-dark.svg"
+          },
           "group": "navigation"
         }
       ]

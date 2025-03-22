@@ -119,14 +119,40 @@ export class GraphPreviewProvider {
         button:hover {
           background: #f5f5f5;
         }
+        .engine-selector {
+          display: flex;
+          align-items: center;
+          margin-left: auto;
+        }
+        .engine-selector label {
+          margin-right: 5px;
+        }
+        select {
+          padding: 4px;
+          border-radius: 3px;
+          border: 1px solid #ccc;
+        }
       </style>
     </head>
     <body>
       <div class="toolbar">
-        <button id="zoomIn">Zoom In</button>
-        <button id="zoomOut">Zoom Out</button>
+        <!--<button id="zoomIn">Zoom In</button>-->
+        <!--<button id="zoomOut">Zoom Out</button>-->
         <button id="resetZoom">Reset</button>
-        <button id="fitGraph">Fit to View</button>
+        <!--<button id="fitGraph">Fit to View</button>-->
+        <div class="engine-selector">
+          <label for="engineSelect">Engine:</label>
+          <select id="engineSelect">
+            <option value="dot" selected>dot</option>
+            <option value="circo">circo</option>
+            <option value="fdp">fdp</option>
+            <option value="sfdp">sfdp</option>
+            <option value="neato">neato</option>
+            <option value="osage">osage</option>
+            <option value="patchwork">patchwork</option>
+            <option value="twopi">twopi</option>
+          </select>
+        </div>
       </div>
       <div id="graph">
         <div class="graph-container"></div>
@@ -149,10 +175,13 @@ export class GraphPreviewProvider {
         // DOT content to render
         const dotContent = ${JSON.stringify(dotContent)};
         
+        // Current engine
+        let currentEngine = "dot";
+        
         // Create the graphviz renderer
         const graphviz = d3.select(".graph-container")
           .graphviz()
-          .engine("dot")
+          .engine(currentEngine)
           .width("100%")
           .height("100%")
           .zoom(true)
@@ -162,6 +191,7 @@ export class GraphPreviewProvider {
         function renderGraph() {
           try {
             graphviz
+              .engine(currentEngine)
               .renderDot(dotContent)
               .on("end", function() {
                 console.log("Graph rendering complete");
@@ -175,24 +205,31 @@ export class GraphPreviewProvider {
           }
         }
         
-        // Add event listeners for zoom controls
-        document.getElementById('zoomIn').addEventListener('click', () => {
-          const currentScale = graphviz.zoomScale();
-          graphviz.zoom(true).scale(currentScale * 1.2).render();
+        // Add event listener for engine selection
+        document.getElementById('engineSelect').addEventListener('change', (event) => {
+          currentEngine = event.target.value;
+          console.log("Switching to engine:", currentEngine);
+          renderGraph();
         });
         
-        document.getElementById('zoomOut').addEventListener('click', () => {
-          const currentScale = graphviz.zoomScale();
-          graphviz.zoom(true).scale(currentScale * 0.8).render();
-        });
+        // Add event listeners for zoom controls
+        // document.getElementById('zoomIn').addEventListener('click', () => {
+        //   //const currentScale = graphviz.zoomScale();
+        //   graphviz.zoom(true).scale(1.2);
+        // });
+        
+        // document.getElementById('zoomOut').addEventListener('click', () => {
+        //   //const currentScale = graphviz.zoomScale();
+        //   graphviz.zoom(true).scale(0.8);
+        // });
         
         document.getElementById('resetZoom').addEventListener('click', () => {
           graphviz.resetZoom();
         });
         
-        document.getElementById('fitGraph').addEventListener('click', () => {
-          graphviz.fit(true).render();
-        });
+        // document.getElementById('fitGraph').addEventListener('click', () => {
+        //   graphviz.fit(true);
+        // });
         
         // Start rendering
         renderGraph();
