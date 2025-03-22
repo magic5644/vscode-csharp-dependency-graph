@@ -36,6 +36,14 @@
       {
         "command": "vscode-csharp-dependency-graph.generate-dependency-graph",
         "title": "C#: Generate Dependency Graph"
+      },
+      {
+        "command": "csharp-dependency-graph.previewGraphviz",
+        "title": "Preview Graphviz",
+        "icon": {
+          "light": "resources/icon-light.svg",
+          "dark": "resources/icon-dark.svg"
+        }
       }
     ],
     "configuration": {
@@ -71,6 +79,11 @@
           "default": true,
           "description": "Exclude test projects from the dependency graph"
         },
+        "csharpDependencyGraph.openPreviewOnGraphvizFileOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open automatically the Graphviz preview on graphviz file"
+        },
         "csharpDependencyGraph.testProjectPatterns": {
           "type": "array",
           "default": [
@@ -91,6 +104,22 @@
           "description": "Glob patterns for source files to exclude from class dependency analysis"
         }
       }
+    },
+    "languages": [
+      {
+        "id": "dot",
+        "extensions": [".dot", ".gv"],
+        "aliases": ["Graphviz", "DOT"]
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "editorLangId == dot",
+          "command": "csharp-dependency-graph.previewGraphviz",
+          "group": "navigation"
+        }
+      ]
     }
   },
   "scripts": {

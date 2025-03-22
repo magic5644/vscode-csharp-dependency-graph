@@ -1,0 +1,32 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+      <feOffset dx="1" dy="2" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    
+    <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 Z" fill="black" />
+    </marker>
+  </defs>
+  
+  <!-- Graph elements -->
+  <circle cx="32" cy="32" r="16" fill="none" stroke="black" stroke-width="2"/>
+  <circle cx="96" cy="32" r="16" fill="none" stroke="black" stroke-width="2"/>
+  <circle cx="64" cy="96" r="16" fill="none" stroke="black" stroke-width="2"/>
+  
+  <!-- Connection lines -->
+  <line x1="44" y1="36" x2="84" y2="36" stroke="black" stroke-width="3"/>
+  <line x1="32" y1="48" x2="56" y2="84" stroke="black" stroke-width="3"/>
+  <line x1="96" y1="48" x2="72" y2="84" stroke="black" stroke-width="3"/>
+
+  <!-- C# Logo -->
+  <text x="64" y="64" font-size="24" font-family="Arial, sans-serif" font-weight="bold" text-anchor="middle" fill="black">C#</text>
+</svg>

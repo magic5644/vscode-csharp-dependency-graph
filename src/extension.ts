@@ -269,6 +269,37 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(disposable);
+
+  // Register command to preview Graphviz files
+  context.subscriptions.push(
+    vscode.commands.registerCommand('csharp-dependency-graph.previewGraphviz', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && (editor.document.languageId === 'dot' || 
+                    editor.document.fileName.endsWith('.dot') || 
+                    editor.document.fileName.endsWith('.gv'))) {
+          const dotContent = editor.document.getText();
+          const title = path.basename(editor.document.fileName);
+          graphPreviewProvider.showPreview(dotContent, title);
+      } else {
+          vscode.window.showErrorMessage('No Graphviz file is currently open.');
+      }
+    })
+  );
+
+  // Automatically preview Graphviz files when they are opened (optional)
+  const config = vscode.workspace.getConfiguration('csharpDependencyGraph');
+  const openPreviewOnGraphvizFileOpen = config.get<boolean>('openPreviewOnGraphvizFileOpen', true);
+  if (openPreviewOnGraphvizFileOpen) {
+    vscode.workspace.onDidOpenTextDocument((document) => {
+      if (document.languageId === 'dot' || 
+          document.fileName.endsWith('.dot') || 
+          document.fileName.endsWith('.gv')) {
+          const dotContent = document.getText();
+          const title = path.basename(document.fileName);
+          graphPreviewProvider.showPreview(dotContent, title);
+      }
+    });
+  }
 }
 
 export function deactivate() {}
