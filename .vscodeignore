@@ -12,7 +12,6 @@ node_modules/**
 package-lock.json
 test-workspace/**
 extension/out/**
-resources/*.gif
 assets/**
 .qodo/**
-**/*.dot
+*.dot

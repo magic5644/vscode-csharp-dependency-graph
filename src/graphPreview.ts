@@ -79,7 +79,11 @@ export class GraphPreviewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https: data:; script-src ${this._panel.webview.cspSource} https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; connect-src ${this._panel.webview.cspSource} https://cdn.jsdelivr.net; worker-src blob:; child-src blob:; font-src ${this._panel.webview.cspSource}">
       <title>C# Dependency Graph</title>
+      <script src="${d3Uri}"></script>
+      <script src="${graphvizUri}"></script>
+      <script src="${d3GraphvizUri}"></script>
       <style>
         body {
           margin: 0;
@@ -132,14 +136,23 @@ export class GraphPreviewProvider {
           border-radius: 3px;
           border: 1px solid #ccc;
         }
+        .status-message {
+          position: fixed;
+          bottom: 10px;
+          left: 10px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          padding: 5px 10px;
+          border-radius: 3px;
+          font-size: 12px;
+          z-index: 1000;
+        }
       </style>
     </head>
     <body>
       <div class="toolbar">
-        <!--<button id="zoomIn">Zoom In</button>-->
-        <!--<button id="zoomOut">Zoom Out</button>-->
         <button id="resetZoom">Reset</button>
-        <!--<button id="fitGraph">Fit to View</button>-->
+        <button id="debugInfo">Debug Info</button>
         <div class="engine-selector">
           <label for="engineSelect">Engine:</label>
           <select id="engineSelect">
@@ -157,47 +170,99 @@ export class GraphPreviewProvider {
       <div id="graph">
         <div class="graph-container"></div>
       </div>
-      
-      <script src="${d3Uri}"></script>
-      <script src="${graphvizUri}"></script>
-      <script src="${d3GraphvizUri}"></script>
+      <div id="status" class="status-message" style="display: none;"></div>
       <script>
+        const vscode = acquireVsCodeApi();
+        const graphDiv = document.querySelector('.graph-container');
+        // Display status messages
+        function showStatus(message) {
+          const status = document.getElementById('status');
+          status.textContent = message;
+          status.style.display = 'block';
+          console.log("[Status]", message);
+          
+          // Also send to VSCode
+          vscode.postMessage({
+            command: 'log',
+            text: message
+          });
+          
+          // Auto-hide after 5 seconds
+          setTimeout(() => {
+            status.style.display = 'none';
+          }, 5000);
+        }
+        
+        // Error handling
+        window.addEventListener('error', (event) => {
+          vscode.postMessage({
+            command: 'error',
+            text: 'JavaScript error: ' + event.message
+          });
+          showStatus('Error: ' + event.message);
+        });
+
         // Use the CDN version for WASM files
-        // The @hpcc-js/wasm library will load the WASM file dynamically
         const hpccWasm = window["@hpcc-js/wasm"];
         if (hpccWasm && hpccWasm.Graphviz) {
           hpccWasm.Graphviz.wasmFolder = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist";
+          showStatus("WASM configuration set");
+        } else {
+          showStatus("Warning: WASM configuration object not found");
         }
         
-        const vscode = acquireVsCodeApi();
-        const graphDiv = document.querySelector('.graph-container');
+        
         
         // DOT content to render
         const dotContent = ${JSON.stringify(dotContent)};
+        showStatus("DOT content loaded: " + dotContent.substring(0, 50) + "...");
         
         // Current engine
         let currentEngine = "dot";
         
         // Create the graphviz renderer
-        const graphviz = d3.select(".graph-container")
-          .graphviz()
-          .engine(currentEngine)
-          .width("100%")
-          .height("100%")
-          .zoom(true)
-          .fit(true);
+        let graphviz;
+        try {
+          graphviz = d3.select(".graph-container")
+            .graphviz()
+            .engine(currentEngine)
+            .width("100%")
+            .height("100%")
+            .zoom(true)
+            .fit(true);
+          showStatus("Graphviz renderer initialized");
+        } catch (error) {
+          showStatus("Failed to initialize graphviz: " + error.message);
+          vscode.postMessage({
+            command: 'error',
+            text: 'Failed to initialize graphviz: ' + error.message
+          });
+        }
         
         // Render the graph
         function renderGraph() {
+          showStatus("Rendering graph with engine: " + currentEngine);
           try {
+            if (!graphviz) {
+              throw new Error("Graphviz renderer not initialized");
+            }
+            
             graphviz
               .engine(currentEngine)
               .renderDot(dotContent)
               .on("end", function() {
-                console.log("Graph rendering complete");
+                showStatus("Graph rendering complete");
+              })
+              .onerror(function(error) {
+                showStatus("Graph rendering error: " + error);
+                vscode.postMessage({
+                  command: 'error',
+                  text: 'Graph rendering error: ' + error
+                });
               });
           } catch (error) {
             graphDiv.innerHTML = '<div class="error">Error rendering graph: ' + error.message + '</div>';
+            showStatus("Error rendering graph: " + error.message);
             vscode.postMessage({
               command: 'error',
               text: 'Error rendering graph: ' + error.message
@@ -208,31 +273,38 @@ export class GraphPreviewProvider {
         // Add event listener for engine selection
         document.getElementById('engineSelect').addEventListener('change', (event) => {
           currentEngine = event.target.value;
-          console.log("Switching to engine:", currentEngine);
+          showStatus("Switching to engine: " + currentEngine);
           renderGraph();
         });
         
-        // Add event listeners for zoom controls
-        // document.getElementById('zoomIn').addEventListener('click', () => {
-        //   //const currentScale = graphviz.zoomScale();
-        //   graphviz.zoom(true).scale(1.2);
-        // });
-        
-        // document.getElementById('zoomOut').addEventListener('click', () => {
-        //   //const currentScale = graphviz.zoomScale();
-        //   graphviz.zoom(true).scale(0.8);
-        // });
-        
         document.getElementById('resetZoom').addEventListener('click', () => {
-          graphviz.resetZoom();
+          if (graphviz) {
+            graphviz.resetZoom();
+            showStatus("Zoom reset");
+          }
         });
         
-        // document.getElementById('fitGraph').addEventListener('click', () => {
-        //   graphviz.fit(true);
-        // });
+        // Add debug button
+        document.getElementById('debugInfo').addEventListener('click', () => {
+          const debugInfo = {
+            d3Version: d3.version,
+            dotContentLength: dotContent.length,
+            graphvizInitialized: !!graphviz,
+            wasmAvailable: !!hpccWasm
+          };
+          
+          showStatus("Debug info: " + JSON.stringify(debugInfo));
+          vscode.postMessage({
+            command: 'log',
+            text: 'Debug info: ' + JSON.stringify(debugInfo, null, 2)
+          });
+        });
         
-        // Start rendering
-        renderGraph();
+        // Start rendering after a short delay to ensure everything is loaded
+        setTimeout(() => {
+          showStatus("Starting graph rendering...");
+          renderGraph();
+        }, 500);
       </script>
     </body>
     </html>

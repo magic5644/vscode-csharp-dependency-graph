@@ -30,12 +30,15 @@ function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean
 
 export async function activate(context: vscode.ExtensionContext) {
   // Prepare Viz.js for preview
-  try {
-    await prepareVizJs(context.extensionUri);
-  } catch (error) {
-    console.error('Error initializing Viz.js:', error);
-    vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
-  }
+  // Attendre un court instant pour l'initialisation complète
+  setTimeout(async () => {
+    try {
+      await prepareVizJs(context.extensionUri);
+    } catch (error) {
+      console.error('Error initializing Viz.js:', error);
+      vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
+    }
+  }, 500);
 
   const graphPreviewProvider = new GraphPreviewProvider(context.extensionUri);
   const disposable = vscode.commands.registerCommand(

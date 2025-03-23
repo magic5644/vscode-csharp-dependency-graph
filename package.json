@@ -21,7 +21,8 @@
   },
   "pricing": "Free",
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onLanguage:dot"
   ],
   "main": "./dist/extension.js",
   "icon": "resources/icon.png",
