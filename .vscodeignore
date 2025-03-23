@@ -13,5 +13,6 @@ package-lock.json
 test-workspace/**
 extension/out/**
 assets/**
+Assets/**
 .qodo/**
 *.dot
