@@ -52,37 +52,37 @@
         "csharpDependencyGraph.useSolutionFile": {
           "type": "boolean",
           "default": true,
-          "description": "Use .sln files when found to identify projects in the solution structure"
+          "markdownDescription": "Use **.sln files** when found to identify projects in the solution structure"
         },
         "csharpDependencyGraph.includeNetVersion": {
           "type": "boolean",
           "default": true,
-          "description": "Include target framework version in the graph nodes"
+          "markdownDescription": "Include **.NET target framework** version in the graph nodes"
         },
         "csharpDependencyGraph.includePackageDependenciesInProjectGraph": {
           "type": "boolean",
           "default": false,
-          "description": "Include NuGet package dependencies in the project dependency graph"
+          "markdownDescription": "Include **NuGet package dependencies** in the project dependency graph"
         },
         "csharpDependencyGraph.classDependencyColor": {
           "type": "string",
           "default": "lightgray",
-          "description": "Color for the classes in class dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
+          "markdownDescription": "Color for the classes in class dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.packageDependencyColor": {
           "type": "string",
           "default": "#ffcccc",
-          "description": "Color for the packages in project dependency graph. Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
+          "markdownDescription": "Color for the packages in project dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.excludeTestProjects": {
           "type": "boolean",
           "default": true,
-          "description": "Exclude test projects from the dependency graph"
+          "markdownDescription": "Exclude test projects from the dependency graph"
         },
         "csharpDependencyGraph.openPreviewOnGraphvizFileOpen": {
           "type": "boolean",
           "default": true,
-          "description": "Open automatically the Graphviz preview on graphviz file"
+          "markdownDescription": "(beta) Open automatically the new Graphviz preview on graphviz file"
         },
         "csharpDependencyGraph.testProjectPatterns": {
           "type": "array",
@@ -91,7 +91,7 @@
             "*Tests*",
             "*TestProject*"
           ],
-          "description": "Glob patterns to identify test projects to exclude"
+          "markdownDescription": "Glob patterns to identify test projects to exclude"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
           "type": "array",
@@ -101,7 +101,7 @@
             "**/Generated/**",
             "**/node_modules/**"
           ],
-          "description": "Glob patterns for source files to exclude from class dependency analysis"
+          "markdownDescription": "Glob patterns for source files to exclude from class dependency analysis"
         }
       }
     },
