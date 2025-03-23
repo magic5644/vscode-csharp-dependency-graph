@@ -15,4 +15,4 @@ extension/out/**
 resources/*.gif
 assets/**
 .qodo/**
-/*.dot
+**/*.dot
