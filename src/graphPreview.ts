@@ -18,7 +18,7 @@ export class GraphPreviewProvider {
 
     // Otherwise, create a new panel
     this._panel = vscode.window.createWebviewPanel(
-      "csharpDependencyGraph",
+      "csharp-dependency-graph",
       title,
       vscode.ViewColumn.Beside,
       {
