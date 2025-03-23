@@ -102,6 +102,7 @@ This extension contributes the following settings:
 - `csharpDependencyGraph.testProjectPatterns`: Glob patterns to identify test projects
 - `csharpDependencyGraph.excludeSourcePatterns`: Glob patterns for source files to exclude from analysis
 - `csharpDependencyGraph.openPreviewOnGraphvizFileOpen`: Enable or disable previewing Graphviz on graphviz file open (default: true)
+![C# Dependency Graph](assets/preview_settings.png)
 
 ## How It Works
 
