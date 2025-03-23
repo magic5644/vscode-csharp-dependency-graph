@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0] - 2025-03-23
+
+- **Updated** Enhance performance of dependency graph generation
+- **Fixed** Address issue with incorrect package version resolution
+- **Added** Support for additional configuration options in settings
+- **Added** Preview Graphviz on graphviz file open **(beta)**
+- **Added** Preview configuration options in settings
+
 ## [0.5.0] - 2025-03-20
 
 - **Updated** Refactor dependency resolution and enhance .csproj parsing

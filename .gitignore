@@ -4,6 +4,7 @@ node_modules/
 # Compiled output
 out/
 dist/
+resources/js/*.js
 *.vsix
 test-workspace/ProjectA/obj/
 test-workspace/ProjectA/bin/
