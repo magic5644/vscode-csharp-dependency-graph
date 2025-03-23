@@ -1,7 +1,7 @@
 # Changelog
 
 
-## [0.6.2] - 2025-03-23
+## [0.6.3] - 2025-03-23
 
 - **Fixed** Fix packaging issue
 

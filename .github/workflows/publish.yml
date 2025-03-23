@@ -57,6 +57,12 @@ jobs:
           npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
       - name: Install Dependencies
         run: npm install
+      - name: Copy JS Resources
+        run: |
+          mkdir -p resources/js
+          cp node_modules/@hpcc-js/wasm/dist/graphviz.umd.js resources/js/
+          cp node_modules/d3/dist/d3.min.js resources/js/
+          cp node_modules/d3-graphviz/build/d3-graphviz.min.js resources/js/
       - name: Package Extension
         run: |
           npm install -g @vscode/vsce
