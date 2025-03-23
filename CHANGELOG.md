@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1] - 2025-03-23
+
+- **Fixed** Preview webview initialization issue
+
 ## [0.6.0] - 2025-03-23
 
 - **Updated** Enhance performance of dependency graph generation
