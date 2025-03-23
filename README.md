@@ -78,7 +78,7 @@ Graph is generated in  the selected folder. You can open it in Graphviz, Graphvi
 
 You can view the generated .dot file using:
 
-- **New**: Preview Graphviz on graphviz file open (beta)
+- **New**: Preview Graphviz on graphviz file open (beta) ![Graphviz Preview Button](assets/preview_command_button.png)
 - VS Code extensions like [Graphviz Preview](https://marketplace.visualstudio.com/items?itemName=EFanZh.graphviz-preview)
 - Online tools like [Graphviz Online](https://dreampuf.github.io/GraphvizOnline/)
 - Desktop applications like [Graphviz](https://graphviz.org/)
