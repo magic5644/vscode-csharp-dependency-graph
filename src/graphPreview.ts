@@ -164,7 +164,7 @@ export class GraphPreviewProvider {
       <script>
         // Use the CDN version for WASM files
         // The @hpcc-js/wasm library will load the WASM file dynamically
-        hpccWasm = window["@hpcc-js/wasm"];
+        const hpccWasm = window["@hpcc-js/wasm"];
         if (hpccWasm && hpccWasm.Graphviz) {
           hpccWasm.Graphviz.wasmFolder = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist";
         }

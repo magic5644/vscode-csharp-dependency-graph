@@ -154,7 +154,7 @@ classDiagram
       +parseClassDependencies(sourceFiles: string[]): Promise<ClassDependency[]>
   }
   
-  class GraphPreviewProvider {
+  class GraphPreview {
       +showPreview(dotContent: string, title: string): void
       -_updateContent(dotContent: string): void
   }
@@ -169,10 +169,10 @@ classDiagram
   Extension --> CsharpSourceFinder
   Extension --> CsharpClassParser
   Extension --> SlnParser
-  Extension --> GraphPreviewProvider
+  Extension --> GraphPreview
   Extension --> VizInitializer
   CsprojFinder --> SlnParser
-  GraphPreviewProvider ..> VizInitializer: uses
+  GraphPreview ..> VizInitializer: uses
 ```
 
 ## Known Issues
