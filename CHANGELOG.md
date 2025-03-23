@@ -1,5 +1,10 @@
 # Changelog
 
+
+## [0.6.2] - 2025-03-23
+
+- **Fixed** Fix packaging issue
+
 ## [0.6.1] - 2025-03-23
 
 - **Fixed** Preview webview initialization issue
