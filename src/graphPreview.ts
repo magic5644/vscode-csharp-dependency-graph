@@ -26,6 +26,7 @@ export class GraphPreviewProvider {
         retainContextWhenHidden: true,
         localResourceRoots: [
           vscode.Uri.joinPath(this._extensionUri, "resources"),
+          vscode.Uri.joinPath(this._extensionUri, "resources", "js")
         ],
       }
     );
@@ -209,7 +210,7 @@ export class GraphPreviewProvider {
         // Use the CDN version for WASM files
         const hpccWasm = window["@hpcc-js/wasm"];
         if (hpccWasm && hpccWasm.Graphviz) {
-          hpccWasm.Graphviz.wasmFolder = "${wasmFolderUri}" // "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist";
+          hpccWasm.Graphviz.wasmFolder = "${wasmFolderUri}"
           showStatus("WASM configuration set");
         } else {
           showStatus("Warning: WASM configuration object not found");

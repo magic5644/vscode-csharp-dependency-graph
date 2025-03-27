@@ -28,6 +28,14 @@ function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean
   return patterns.some(pattern => isPathMatchingPattern(filePath, pattern));
 }
 
+function sanitizeDotContent(dotContent: string): string {
+  return dotContent
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript:/gi, 'removed:')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '');
+}
+
 export async function activate(context: vscode.ExtensionContext) {
   try {
     await prepareVizJs(context.extensionUri);
@@ -57,6 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const useSolutionFile = config.get<boolean>('useSolutionFile', true);
         const classDependencyColor = config.get<string>('classDependencyColor', 'lightgray');
         const packageNodeColor = config.get<string>('packageDependencyColor', '#ffcccc');
+
 
         // Find solution files if enabled
         let slnFiles: string[] = [];
@@ -244,7 +253,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ).then(
           (filePath) => {
             vscode.window.showInformationMessage(
-              `Dependency graph saved to ${filePath}`,
+              `Dependency graph saved to ${path.basename(filePath)}`,
               'Open File', 'Preview'
             ).then(selection => {
               if (selection === 'Open File') {
@@ -252,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext) {
               }else if (selection === 'Preview') {
                 const dotContent = fs.readFileSync(filePath, 'utf8');
                 const title = path.basename(filePath);
-                graphPreviewProvider.showPreview(dotContent, title);
+                graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
               }
             });
           },
@@ -278,7 +287,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     editor.document.fileName.endsWith('.gv'))) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
-          graphPreviewProvider.showPreview(dotContent, title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
       } else {
           vscode.window.showErrorMessage('No Graphviz file is currently open.');
       }
@@ -295,7 +304,7 @@ export async function activate(context: vscode.ExtensionContext) {
           document.fileName.endsWith('.gv')) {
           const dotContent = document.getText();
           const title = path.basename(document.fileName);
-          graphPreviewProvider.showPreview(dotContent, title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
       }
     });
   }
