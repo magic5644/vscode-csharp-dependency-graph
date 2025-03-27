@@ -26,6 +26,7 @@ export class GraphPreviewProvider {
         retainContextWhenHidden: true,
         localResourceRoots: [
           vscode.Uri.joinPath(this._extensionUri, "resources"),
+          vscode.Uri.joinPath(this._extensionUri, "resources", "js")
         ],
       }
     );
@@ -72,6 +73,10 @@ export class GraphPreviewProvider {
       )
     );
 
+    const wasmFolderUri = this._panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, "resources", "js")
+    );
+
     // HTML with d3-graphviz
     this._panel.webview.html = `
     <!DOCTYPE html>
@@ -79,11 +84,11 @@ export class GraphPreviewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https: data:; script-src ${this._panel.webview.cspSource} https://cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; connect-src ${this._panel.webview.cspSource} https://cdn.jsdelivr.net; worker-src blob:; child-src blob:; font-src ${this._panel.webview.cspSource}">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} data:; script-src ${this._panel.webview.cspSource} 'unsafe-inline' 'unsafe-eval'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; connect-src ${this._panel.webview.cspSource}; worker-src blob:; child-src blob:; font-src ${this._panel.webview.cspSource}">
       <title>C# Dependency Graph</title>
-      <script src="${d3Uri}"></script>
-      <script src="${graphvizUri}"></script>
-      <script src="${d3GraphvizUri}"></script>
+      <script src="${d3Uri}" type="application/javascript"></script>
+      <script src="${graphvizUri}" type="application/javascript"></script>
+      <script src="${d3GraphvizUri}" type="application/javascript"></script>
       <style>
         body {
           margin: 0;
@@ -205,7 +210,7 @@ export class GraphPreviewProvider {
         // Use the CDN version for WASM files
         const hpccWasm = window["@hpcc-js/wasm"];
         if (hpccWasm && hpccWasm.Graphviz) {
-          hpccWasm.Graphviz.wasmFolder = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm/dist";
+          hpccWasm.Graphviz.wasmFolder = "${wasmFolderUri}"
           showStatus("WASM configuration set");
         } else {
           showStatus("Warning: WASM configuration object not found");

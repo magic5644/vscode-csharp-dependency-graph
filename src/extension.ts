@@ -10,6 +10,7 @@ import { findSolutionFiles, parseSolutionFile } from './slnParser';
 import { minimatch } from 'minimatch';
 import { GraphPreviewProvider } from './graphPreview';
 import { prepareVizJs } from './vizInitializer';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Checks if a file path matches a given pattern
@@ -28,17 +29,37 @@ function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean
   return patterns.some(pattern => isPathMatchingPattern(filePath, pattern));
 }
 
+function sanitizeDotContent(dotContent: string): string {
+  const dotGraphRegex = /^\s*(di)?graph\s+[\w"{}]/i;
+  if (!dotGraphRegex.exec(dotContent.trim())) {
+    console.warn("Warning: Content doesn't appear to be a valid DOT graph");
+
+  }
+  return dotContent.replace(/label\s*=\s*["']([^"']*)["']/gi, (_match, labelContent) => {
+    const sanitized = sanitizeHtml(labelContent, {
+      allowedTags: [],
+      allowedAttributes: {}
+    });
+    return `label="${sanitized}"`;
+  });
+}
+
 export async function activate(context: vscode.ExtensionContext) {
-  // Prepare Viz.js for preview
-  // Attendre un court instant pour l'initialisation complète
-  setTimeout(async () => {
-    try {
-      await prepareVizJs(context.extensionUri);
-    } catch (error) {
-      console.error('Error initializing Viz.js:', error);
-      vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
-    }
-  }, 500);
+  try {
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Initializing Viz.js...',
+        cancellable: false
+      },
+      async () => {
+        await prepareVizJs(context.extensionUri);
+      }
+    );
+  } catch (error) {
+    console.error('Error initializing Viz.js:', error);
+    vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
+  }
 
   const graphPreviewProvider = new GraphPreviewProvider(context.extensionUri);
   const disposable = vscode.commands.registerCommand(
@@ -61,6 +82,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const useSolutionFile = config.get<boolean>('useSolutionFile', true);
         const classDependencyColor = config.get<string>('classDependencyColor', 'lightgray');
         const packageNodeColor = config.get<string>('packageDependencyColor', '#ffcccc');
+
 
         // Find solution files if enabled
         let slnFiles: string[] = [];
@@ -248,7 +270,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ).then(
           (filePath) => {
             vscode.window.showInformationMessage(
-              `Dependency graph saved to ${filePath}`,
+              `Dependency graph saved to ${path.basename(filePath)}`,
               'Open File', 'Preview'
             ).then(selection => {
               if (selection === 'Open File') {
@@ -256,7 +278,7 @@ export async function activate(context: vscode.ExtensionContext) {
               }else if (selection === 'Preview') {
                 const dotContent = fs.readFileSync(filePath, 'utf8');
                 const title = path.basename(filePath);
-                graphPreviewProvider.showPreview(dotContent, title);
+                graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
               }
             });
           },
@@ -282,7 +304,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     editor.document.fileName.endsWith('.gv'))) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
-          graphPreviewProvider.showPreview(dotContent, title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
       } else {
           vscode.window.showErrorMessage('No Graphviz file is currently open.');
       }
@@ -299,7 +321,7 @@ export async function activate(context: vscode.ExtensionContext) {
           document.fileName.endsWith('.gv')) {
           const dotContent = document.getText();
           const title = path.basename(document.fileName);
-          graphPreviewProvider.showPreview(dotContent, title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
       }
     });
   }
