@@ -29,16 +29,40 @@ function isPathMatchingAnyPattern(filePath: string, patterns: string[]): boolean
 }
 
 function sanitizeDotContent(dotContent: string): string {
-  return dotContent
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/javascript:/gi, 'removed:')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '');
+  const dotGraphRegex = /^\s*(di)?graph\s+[\w"{}]/i;
+  if (!dotGraphRegex.exec(dotContent.trim())) {
+    console.warn("Warning: Content doesn't appear to be a valid DOT graph");
+
+  }
+  return dotContent.replace(/label\s*=\s*["']([^"']*)["']/gi, (_match, labelContent) => {
+
+    const sanitized = labelContent
+      .replace(/<\s*script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+      .replace(/<\s*script\b[^>]*\/?>/gi, '')
+
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/javascript:/gi, 'removed:')
+
+      .replace(/<\s*iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '[iframe removed]')
+      .replace(/<\s*object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '[object removed]')
+      .replace(/<\s*embed\b[^>]*>[\s\S]*?<\/embed\s*>/gi, '[embed removed]');
+  
+    return `label="${sanitized}"`;
+  });
 }
 
 export async function activate(context: vscode.ExtensionContext) {
   try {
-    await prepareVizJs(context.extensionUri);
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Initializing Viz.js...',
+        cancellable: false
+      },
+      async () => {
+        await prepareVizJs(context.extensionUri);
+      }
+    );
   } catch (error) {
     console.error('Error initializing Viz.js:', error);
     vscode.window.showWarningMessage('C# Dependency Graph: Error initializing visualization. Preview may not work correctly.');
