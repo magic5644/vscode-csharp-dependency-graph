@@ -37,12 +37,21 @@ function sanitizeDotContent(dotContent: string): string {
   return dotContent.replace(/label\s*=\s*["']([^"']*)["']/gi, (_match, labelContent) => {
 
     const sanitized = labelContent
-      .replace(/<\s*script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+      // Remove all variations of script tags, including partial ones
+      .replace(/<\s*script\b[^>]*>[\s\S]*?<\/\s*script\b[^>]*>/gi, '')
       .replace(/<\s*script\b[^>]*\/?>/gi, '')
+      .replace(/<\s*script/gi, 'removed-script-tag')  // Handle partial script tags safely
+      .replace(/script\s*>/gi, 'removed-tag-end')  // Handle closing parts safely
 
+      // Remove event handlers
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      
+      // Replace dangerous protocols
       .replace(/javascript:/gi, 'removed:')
+      .replace(/data:/gi, 'removed:')
+      .replace(/vbscript:/gi, 'removed:')
 
+      // Remove other dangerous HTML elements
       .replace(/<\s*iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '[iframe removed]')
       .replace(/<\s*object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '[object removed]')
       .replace(/<\s*embed\b[^>]*>[\s\S]*?<\/embed\s*>/gi, '[embed removed]');
