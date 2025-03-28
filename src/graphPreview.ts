@@ -393,7 +393,7 @@ document.getElementById('exportSvg').addEventListener('click', () => {
     showStatus("SVG export failed: " + error.message);
     vscode.postMessage({
       command: 'error',
-      text: 'SVG export failed: ' + error.message
+      text: 'SVG export failed: ' + (error instanceof Error ? error.message : String(error))
     });
   }
 });
