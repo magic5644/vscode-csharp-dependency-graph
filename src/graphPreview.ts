@@ -1,14 +1,17 @@
 import * as vscode from "vscode";
+import * as path from "path";
 
 export class GraphPreviewProvider {
   private _panel: vscode.WebviewPanel | undefined;
   private readonly _extensionUri: vscode.Uri;
+  private _sourceFilePath: string | undefined;
 
   constructor(extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
   }
 
-  public showPreview(dotContent: string, title: string): void {
+  public showPreview(dotContent: string, title: string, sourceFilePath?: string): void {
+    this._sourceFilePath = sourceFilePath;
     // If a panel is already open, show it and update its content
     if (this._panel) {
       this._panel.reveal();
@@ -26,7 +29,7 @@ export class GraphPreviewProvider {
         retainContextWhenHidden: true,
         localResourceRoots: [
           vscode.Uri.joinPath(this._extensionUri, "resources"),
-          vscode.Uri.joinPath(this._extensionUri, "resources", "js")
+          vscode.Uri.joinPath(this._extensionUri, "resources", "js"),
         ],
       }
     );
@@ -37,9 +40,50 @@ export class GraphPreviewProvider {
     });
 
     // Handle messages from webview
-    this._panel.webview.onDidReceiveMessage((message) => {
+    this._panel.webview.onDidReceiveMessage(async (message) => {
       if (message.command === "error") {
         vscode.window.showErrorMessage(message.text);
+      } else if (message.command === "exportSvg") {
+        try {
+          // Direct use of SVG data
+          const svgContent = message.svgData;
+          
+          // Determine the default directory based on the source file
+          let defaultUri;
+          if (this._sourceFilePath) {
+            // Use the directory of the DOT source file
+            const sourceDir = path.dirname(this._sourceFilePath);
+            // Get the basename without extension and use it for the SVG file
+            const baseName = path.basename(this._sourceFilePath, path.extname(this._sourceFilePath));
+            const fileName = `${baseName}.svg`;
+            defaultUri = vscode.Uri.file(path.join(sourceDir, fileName));
+          } else {
+            // Fallback if no source file (generated from command)
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : '';
+            defaultUri = vscode.Uri.file(path.join(baseDir, `${message.title || 'dependency-graph'}.svg`));
+          }
+          
+          // Show save dialog
+          const saveUri = await vscode.window.showSaveDialog({
+            defaultUri: defaultUri,
+            filters: {
+              'SVG Files': ['svg'],
+              'All Files': ['*']
+            },
+            title: 'Export SVG'
+          });
+          
+          if (saveUri) {
+            // Write SVG content to file
+            const writeData = Buffer.from(svgContent, 'utf8');
+            await vscode.workspace.fs.writeFile(saveUri, writeData);
+            vscode.window.showInformationMessage(`SVG exported to ${saveUri.fsPath}`);
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Failed to export SVG: ${errorMessage}`);
+        }
       }
     });
 
@@ -84,7 +128,17 @@ export class GraphPreviewProvider {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} data:; script-src ${this._panel.webview.cspSource} 'unsafe-inline' 'unsafe-eval'; style-src ${this._panel.webview.cspSource} 'unsafe-inline'; connect-src ${this._panel.webview.cspSource}; worker-src blob:; child-src blob:; font-src ${this._panel.webview.cspSource}">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${
+        this._panel.webview.cspSource
+      } data:; script-src ${
+      this._panel.webview.cspSource
+    } 'unsafe-inline' 'unsafe-eval'; style-src ${
+      this._panel.webview.cspSource
+    } 'unsafe-inline'; connect-src ${
+      this._panel.webview.cspSource
+    }; worker-src blob:; child-src blob:; font-src ${
+      this._panel.webview.cspSource
+    }">
       <title>C# Dependency Graph</title>
       <script src="${d3Uri}" type="application/javascript"></script>
       <script src="${graphvizUri}" type="application/javascript"></script>
@@ -157,6 +211,7 @@ export class GraphPreviewProvider {
     <body>
       <div class="toolbar">
         <button id="resetZoom">Reset</button>
+        <button id="exportSvg">Export SVG</button>
         <button id="debugInfo">Debug Info</button>
         <div class="engine-selector">
           <label for="engineSelect">Engine:</label>
@@ -310,6 +365,38 @@ export class GraphPreviewProvider {
           showStatus("Starting graph rendering...");
           renderGraph();
         }, 500);
+
+        // Export SVG functionality
+document.getElementById('exportSvg').addEventListener('click', () => {
+  try {
+    // Get the SVG element
+    const svgElement = document.querySelector('.graph-container svg');
+    if (!svgElement) {
+      throw new Error('SVG element not found');
+    }
+    
+    // Clone to avoid modifying the displayed SVG
+    const svgClone = svgElement.cloneNode(true);
+    
+    // Add XML declaration and namespace
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    
+    // Direct transmission of SVG data instead of URL
+    vscode.postMessage({
+      command: 'exportSvg',
+      svgData: svgData,
+      title: document.title || 'dependency-graph'
+    });
+    
+    showStatus("Preparing SVG export...");
+  } catch (error) {
+    showStatus("SVG export failed: " + error.message);
+    vscode.postMessage({
+      command: 'error',
+      text: 'SVG export failed: ' + error.message
+    });
+  }
+});
       </script>
     </body>
     </html>
