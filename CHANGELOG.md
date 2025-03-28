@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.5] - 2025-03-28
+
+- **Fixed** Fix security issues
+- **Updated** Update dependencies to address security vulnerabilities
+- **Added** Export graph as SVG
+
 ## [0.6.4] - 2025-03-23
 
 - **Fixed** Fix packaging issue

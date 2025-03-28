@@ -67,11 +67,13 @@
         },
         "csharpDependencyGraph.classDependencyColor": {
           "type": "string",
+          "format": "color",
           "default": "lightgray",
           "markdownDescription": "Color for the classes in class dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.packageDependencyColor": {
           "type": "string",
+          "format": "color",
           "default": "#ffcccc",
           "markdownDescription": "Color for the packages in project dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },

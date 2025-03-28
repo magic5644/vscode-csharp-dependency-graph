@@ -278,7 +278,7 @@ export async function activate(context: vscode.ExtensionContext) {
               }else if (selection === 'Preview') {
                 const dotContent = fs.readFileSync(filePath, 'utf8');
                 const title = path.basename(filePath);
-                graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
+                graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title, filePath);
               }
             });
           },
@@ -304,7 +304,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     editor.document.fileName.endsWith('.gv'))) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
-          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title, editor.document.fileName);
       } else {
           vscode.window.showErrorMessage('No Graphviz file is currently open.');
       }
@@ -321,7 +321,7 @@ export async function activate(context: vscode.ExtensionContext) {
           document.fileName.endsWith('.gv')) {
           const dotContent = document.getText();
           const title = path.basename(document.fileName);
-          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title);
+          graphPreviewProvider.showPreview(sanitizeDotContent(dotContent), title, document.fileName);
       }
     });
   }

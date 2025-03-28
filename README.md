@@ -20,6 +20,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for a list of changes in README.md
 - **DOT file output**: Generate standard DOT files for use with internal preview feature or other visualization tools like Graphviz
 - **Preview Graphviz**: Preview Graphviz on graphviz file open (beta)
 - **Preview configuration options**: Preview configuration options in settings
+- **Export graph as SVG**: Export the generated graph as an SVG file for easy sharing and embedding
 
 ## Screenshots
 
