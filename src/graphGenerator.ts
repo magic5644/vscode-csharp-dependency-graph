@@ -101,7 +101,7 @@ function generateProjectEdges(projects: Project[]): string {
   
   for (const project of projects) {
     for (const dependency of project.dependencies) {
-      dotContent += `  "${project.name}" -> "${dependency}";\n`;
+      dotContent += `  "${project.name}" -> "${dependency}" [penwidth=1.0];\n`;
     }
   }
   
@@ -116,7 +116,7 @@ function generatePackageEdges(projects: Project[]): string {
   
   for (const project of projects) {
     for (const pkg of project.packageDependencies) {
-      dotContent += `  "${project.name}" -> "${pkg.name}" [style=dashed];\n`;
+      dotContent += `  "${project.name}" -> "${pkg.name}" [style=dashed, penwidth=0.5];\n`;
     }
   }
   
@@ -188,7 +188,7 @@ function generateClassDependencyEdges(classDependencies: ClassDependency[]): str
       
       if (targetClass) {
         const targetNodeId = `"${targetClass.projectName}.${targetClass.className}"`;
-        dotContent += `  ${sourceNodeId} -> ${targetNodeId};\n`;
+        dotContent += `  ${sourceNodeId} -> ${targetNodeId} [penwidth=1.5];\n`;
       }
     }
   }
@@ -224,7 +224,7 @@ function findTargetClass(
 
 function injectHeadOfDotFile() {
   let dotContent = 'digraph CSharpDependencies {\n';
-  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=ortho];\n';
+  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=sprite, overlap=false, nodesep=0.2, ranksep=0.8];\n';
   dotContent += '  node [shape=box, style=filled, fillcolor=lightblue, fontname="Helvetica", fontsize=11];\n';
   dotContent += '  edge [fontname="Helvetica", fontsize=9];\n\n';
   return dotContent;

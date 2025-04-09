@@ -10,18 +10,24 @@ export class GraphPreviewProvider {
     this._extensionUri = extensionUri;
   }
 
-  public showPreview(dotContent: string, title: string, sourceFilePath?: string): void {
+  public showPreview(
+    dotContent: string,
+    title: string,
+    sourceFilePath?: string
+  ): void {
     this._sourceFilePath = sourceFilePath;
     // If a panel is already open, show it and update its content
     if (this._panel) {
       this._panel.reveal();
+      // Also update the panel title when showing a new preview
+      this._panel.title = title;
       this._updateContent(dotContent);
       return;
     }
 
     // Otherwise, create a new panel
     this._panel = vscode.window.createWebviewPanel(
-      "csharp-dependency-graph",
+      "vscode-csharp-dependency-graph",
       title,
       vscode.ViewColumn.Beside,
       {
@@ -47,42 +53,52 @@ export class GraphPreviewProvider {
         try {
           // Direct use of SVG data
           const svgContent = message.svgData;
-          
+
           // Determine the default directory based on the source file
           let defaultUri;
           if (this._sourceFilePath) {
             // Use the directory of the DOT source file
             const sourceDir = path.dirname(this._sourceFilePath);
             // Get the basename without extension and use it for the SVG file
-            const baseName = path.basename(this._sourceFilePath, path.extname(this._sourceFilePath));
+            const baseName = path.basename(
+              this._sourceFilePath,
+              path.extname(this._sourceFilePath)
+            );
             const fileName = `${baseName}.svg`;
             defaultUri = vscode.Uri.file(path.join(sourceDir, fileName));
           } else {
             // Fallback if no source file (generated from command)
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : '';
-            defaultUri = vscode.Uri.file(path.join(baseDir, `${message.title || 'dependency-graph'}.svg`));
+            const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : "";
+            defaultUri = vscode.Uri.file(
+              path.join(baseDir, `${message.title || "dependency-graph"}.svg`)
+            );
           }
-          
+
           // Show save dialog
           const saveUri = await vscode.window.showSaveDialog({
             defaultUri: defaultUri,
             filters: {
-              'SVG Files': ['svg'],
-              'All Files': ['*']
+              "SVG Files": ["svg"],
+              "All Files": ["*"],
             },
-            title: 'Export SVG'
+            title: "Export SVG",
           });
-          
+
           if (saveUri) {
             // Write SVG content to file
-            const writeData = Buffer.from(svgContent, 'utf8');
+            const writeData = Buffer.from(svgContent, "utf8");
             await vscode.workspace.fs.writeFile(saveUri, writeData);
-            vscode.window.showInformationMessage(`SVG exported to ${saveUri.fsPath}`);
+            vscode.window.showInformationMessage(
+              `SVG exported to ${saveUri.fsPath}`
+            );
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          vscode.window.showErrorMessage(`Failed to export SVG: ${errorMessage}`);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(
+            `Failed to export SVG: ${errorMessage}`
+          );
         }
       }
     });
@@ -140,9 +156,9 @@ export class GraphPreviewProvider {
       this._panel.webview.cspSource
     }">
       <title>C# Dependency Graph</title>
-      <script src="${d3Uri}" type="application/javascript"></script>
-      <script src="${graphvizUri}" type="application/javascript"></script>
-      <script src="${d3GraphvizUri}" type="application/javascript"></script>
+      <script src="${d3Uri}"></script>
+      <script src="${graphvizUri}"></script>
+      <script src="${d3GraphvizUri}"></script>
       <style>
         body {
           margin: 0;
@@ -195,7 +211,7 @@ export class GraphPreviewProvider {
           border-radius: 3px;
           border: 1px solid #ccc;
         }
-        .status-message {
+        .status {
           position: fixed;
           bottom: 10px;
           left: 10px;
@@ -205,14 +221,54 @@ export class GraphPreviewProvider {
           border-radius: 3px;
           font-size: 12px;
           z-index: 1000;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+        .status.visible {
+          opacity: 1;
+        }
+
+        /* Styles for highlighting nodes */
+        .node text {
+          cursor: pointer;
+        }
+        
+        .node.highlighted polygon,
+        .node.highlighted ellipse,
+        .node.highlighted rect, 
+        .node.highlighted circle {
+          stroke: #ff6600 !important;
+          stroke-width: 2px !important;
+        }
+        
+        .node.highlighted text {
+          font-weight: bold !important;
+        }
+        
+        .node.faded {
+          opacity: 0.2;
+        }
+        
+        .edge.highlighted path {
+          stroke: #ff6600 !important;
+          stroke-width: 2px !important;
+        }
+
+        .edge.highlighted polygon {
+        stroke: #ff6600 !important;
+        fill: #ff6600 !important;
+        }
+        
+        .edge.faded {
+          opacity: 0.1;
         }
       </style>
     </head>
     <body>
       <div class="toolbar">
-        <button id="resetZoom">Reset</button>
-        <button id="exportSvg">Export SVG</button>
-        <button id="debugInfo">Debug Info</button>
+        <button id="resetBtn">Reset View</button>
+        <button id="exportBtn">Export SVG</button>
+        <button id="resetHighlightBtn">Clear Highlight</button>
         <div class="engine-selector">
           <label for="engineSelect">Engine:</label>
           <select id="engineSelect">
@@ -230,173 +286,367 @@ export class GraphPreviewProvider {
       <div id="graph">
         <div class="graph-container"></div>
       </div>
-      <div id="status" class="status-message" style="display: none;"></div>
+      <div id="status" class="status"></div>
       <script>
-        const vscode = acquireVsCodeApi();
-        const graphDiv = document.querySelector('.graph-container');
-        // Display status messages
-        function showStatus(message) {
-          const status = document.getElementById('status');
-          status.textContent = message;
-          status.style.display = 'block';
-          console.log("[Status]", message);
+        // Immediately Invoked Function Expression to avoid global scope pollution
+        (function() {
+          // State variables
+          let currentEngine = "dot";
+          let highlightMode = false;
+          let dotSource = ${JSON.stringify(dotContent)};
+          let zoomBehavior;
           
-          // Also send to VSCode
-          vscode.postMessage({
-            command: 'log',
-            text: message
-          });
+          // DOM elements
+          const graphContainer = document.querySelector(".graph-container");
+          const statusElement = document.getElementById("status");
+          const engineSelect = document.getElementById("engineSelect");
+          const resetBtn = document.getElementById("resetBtn");
+          const exportBtn = document.getElementById("exportBtn");
+          const resetHighlightBtn = document.getElementById("resetHighlightBtn");
           
-          // Auto-hide after 5 seconds
-          setTimeout(() => {
-            status.style.display = 'none';
-          }, 5000);
-        }
-        
-        // Error handling
-        window.addEventListener('error', (event) => {
-          vscode.postMessage({
-            command: 'error',
-            text: 'JavaScript error: ' + event.message
-          });
-          showStatus('Error: ' + event.message);
-        });
-
-        // Use the CDN version for WASM files
-        const hpccWasm = window["@hpcc-js/wasm"];
-        if (hpccWasm && hpccWasm.Graphviz) {
-          hpccWasm.Graphviz.wasmFolder = "${wasmFolderUri}"
-          showStatus("WASM configuration set");
-        } else {
-          showStatus("Warning: WASM configuration object not found");
-        }
-        
-        
-        
-        // DOT content to render
-        const dotContent = ${JSON.stringify(dotContent)};
-        showStatus("DOT content loaded: " + dotContent.substring(0, 50) + "...");
-        
-        // Current engine
-        let currentEngine = "dot";
-        
-        // Create the graphviz renderer
-        let graphviz;
-        try {
-          graphviz = d3.select(".graph-container")
-            .graphviz()
-            .engine(currentEngine)
-            .width("100%")
-            .height("100%")
-            .zoom(true)
-            .fit(true);
-          showStatus("Graphviz renderer initialized");
-        } catch (error) {
-          showStatus("Failed to initialize graphviz: " + error.message);
-          vscode.postMessage({
-            command: 'error',
-            text: 'Failed to initialize graphviz: ' + error.message
-          });
-        }
-        
-        // Render the graph
-        function renderGraph() {
-          showStatus("Rendering graph with engine: " + currentEngine);
+          // Message handler to communicate with VS Code extension
+          const vscode = acquireVsCodeApi();
+          
+          // Show a status message
+          function showStatus(message) {
+            statusElement.textContent = message;
+            statusElement.classList.add("visible");
+            console.log("[Status]", message);
+            
+            setTimeout(() => {
+              statusElement.classList.remove("visible");
+            }, 3000);
+          }
+          
+          // Initialize graphviz
+          let graphviz;
           try {
-            if (!graphviz) {
-              throw new Error("Graphviz renderer not initialized");
+            // Create graphviz instance with simpler initialization to prevent errors
+            graphviz = d3.select(graphContainer)
+              .graphviz()
+              .engine(currentEngine)
+              .width("100%")
+              .height("100%")
+              .zoom(true)
+              .fit(true);
+              
+            // Set additional options after basic initialization succeeds
+            if (graphviz) {
+              // These options help improve edge rendering
+              graphviz.tweenShapes(false);
+              // Only set additional options if they're supported
+              if (typeof graphviz.attributeOptions === 'function') {
+                graphviz.attributeOptions({use: 'edge-usage'});
+              }
+            }
+              
+            // Initialize WASM
+            const hpccWasm = window["@hpcc-js/wasm"];
+            if (hpccWasm && hpccWasm.Graphviz) {
+              hpccWasm.Graphviz.wasmFolder = "${wasmFolderUri}";
+              console.log("WASM folder set to:", "${wasmFolderUri}");
             }
             
-            graphviz
-              .engine(currentEngine)
-              .renderDot(dotContent)
-              .on("end", function() {
-                showStatus("Graph rendering complete");
-              })
-              .onerror(function(error) {
-                showStatus("Graph rendering error: " + error);
-                vscode.postMessage({
-                  command: 'error',
-                  text: 'Graph rendering error: ' + error
-                });
-              });
+            showStatus("Graph renderer initialized");
           } catch (error) {
-            graphDiv.innerHTML = '<div class="error">Error rendering graph: ' + error.message + '</div>';
-            showStatus("Error rendering graph: " + error.message);
-            vscode.postMessage({
-              command: 'error',
-              text: 'Error rendering graph: ' + error.message
-            });
+            console.error("Failed to initialize graphviz:", error);
+            showStatus("Error: " + error.message);
+            graphviz = null; // Ensure we don't use a partially initialized instance
           }
-        }
-        
-        // Add event listener for engine selection
-        document.getElementById('engineSelect').addEventListener('change', (event) => {
-          currentEngine = event.target.value;
-          showStatus("Switching to engine: " + currentEngine);
-          renderGraph();
-        });
-        
-        document.getElementById('resetZoom').addEventListener('click', () => {
-          if (graphviz) {
-            graphviz.resetZoom();
-            showStatus("Zoom reset");
-          }
-        });
-        
-        // Add debug button
-        document.getElementById('debugInfo').addEventListener('click', () => {
-          const debugInfo = {
-            d3Version: d3.version,
-            dotContentLength: dotContent.length,
-            graphvizInitialized: !!graphviz,
-            wasmAvailable: !!hpccWasm
-          };
           
-          showStatus("Debug info: " + JSON.stringify(debugInfo));
-          vscode.postMessage({
-            command: 'log',
-            text: 'Debug info: ' + JSON.stringify(debugInfo, null, 2)
+          // Create the graph
+          function renderGraph() {
+            try {
+              if (!graphviz) throw new Error("Graphviz not initialized");
+              
+              showStatus("Rendering graph with " + currentEngine);
+              
+              graphviz
+                .engine(currentEngine)
+                .renderDot(dotSource)
+                .on("end", function() {
+                  setupInteractivity();
+                  setupZoomBehavior();
+                });
+                
+            } catch (error) {
+              console.error("Error rendering graph:", error);
+              showStatus("Error: " + error.message);
+            }
+          }
+          
+          // Setup zoom behavior explicitly
+          function setupZoomBehavior() {
+            try {
+              const svg = graphContainer.querySelector("svg");
+              if (!svg) return;
+              
+              // Make sure we have a zoom behavior
+              if (graphviz && typeof graphviz.zoomBehavior === 'function') {
+                zoomBehavior = graphviz.zoomBehavior();
+                
+                // Ensure the zoom behavior is properly applied
+                const g = svg.querySelector("g");
+                if (g) {
+                  // This makes sure the wheel events are processed by d3's zoom
+                  d3.select(svg).call(zoomBehavior);
+                  showStatus("Zoom behavior initialized");
+                }
+              }
+            } catch (error) {
+              console.error("Error setting up zoom:", error);
+            }
+          }
+          
+          // Clear any highlighting
+          function clearHighlighting() {
+            if (!highlightMode) return;
+            
+            try {
+              const svg = graphContainer.querySelector("svg");
+              if (!svg) return;
+              
+              // Reset node styles
+              svg.querySelectorAll("g.node").forEach(node => {
+                node.classList.remove("highlighted");
+                node.classList.remove("faded");
+              });
+              
+              // Reset edge styles
+              svg.querySelectorAll("g.edge").forEach(edge => {
+                edge.classList.remove("highlighted");
+                edge.classList.remove("faded");
+              });
+              
+              highlightMode = false;
+              showStatus("Highlighting cleared");
+            } catch (error) {
+              console.error("Error clearing highlighting:", error);
+            }
+          }
+          
+          // Get a node's ID from its title element
+          function getNodeId(node) {
+            try {
+              const titleEl = node.querySelector("title");
+              return titleEl ? titleEl.textContent : null;
+            } catch (error) {
+              console.error("Error getting node ID:", error);
+              return null;
+            }
+          }
+          
+          // Handle clicks on graph elements via event delegation
+          function setupInteractivity() {
+            try {
+              const svg = graphContainer.querySelector("svg");
+              if (!svg) return;
+              
+              // We no longer clone the SVG as it breaks the zoom behavior
+              // Instead, we just remove existing listeners if any
+              svg.removeEventListener("click", svgClickHandler);
+              svg.addEventListener("click", svgClickHandler);
+              
+              showStatus("Graph ready");
+            } catch (error) {
+              console.error("Error setting up interactivity:", error);
+            }
+          }
+          
+          // SVG click handler function - separate to allow clean removal
+          function svgClickHandler(event) {
+            // Find if we clicked on a node or its child
+            let target = event.target;
+            let nodeElement = null;
+            
+            // Traverse up to find if we clicked in a node
+            while (target && target.ownerSVGElement) {
+              if (target.classList && target.classList.contains("node")) {
+                nodeElement = target;
+                break;
+              }
+              if (target.parentElement && 
+                  target.parentElement.classList && 
+                  target.parentElement.classList.contains("node")) {
+                nodeElement = target.parentElement;
+                break;
+              }
+              target = target.parentElement;
+            }
+            
+            if (nodeElement) {
+              // Node click
+              event.stopPropagation();
+              highlightNodeDependencies(nodeElement);
+            } else if (target === event.currentTarget) {
+              // Background click
+              clearHighlighting();
+            }
+          }
+          
+          // Highlight a node and all its dependencies recursively
+          function highlightNodeDependencies(nodeElement) {
+            try {
+              // Get the node ID
+              const clickedNodeId = getNodeId(nodeElement);
+              if (!clickedNodeId) return;
+              
+              // Clear existing highlighting - IMPORTANT: Always reset before applying new highlights
+              clearHighlighting();
+              
+              const svg = nodeElement.ownerSVGElement;
+              if (!svg) return;
+              
+              // First, fade all nodes and edges
+              svg.querySelectorAll("g.node").forEach(node => {
+                node.classList.add("faded");
+                // Make sure no old highlighting classes remain
+                node.classList.remove("highlighted");
+              });
+              
+              svg.querySelectorAll("g.edge").forEach(edge => {
+                edge.classList.add("faded");
+                // Make sure no old highlighting classes remain
+                edge.classList.remove("highlighted");
+              });
+              
+              // Set to track visited nodes to avoid infinite recursion
+              const visitedNodes = new Set();
+              // Set for all nodes that should be highlighted
+              const nodesToHighlight = new Set();
+              // Set for all edges that should be highlighted
+              const edgesToHighlight = new Set();
+              
+              // Add the clicked node
+              nodesToHighlight.add(clickedNodeId);
+              
+              // Recursive function to find all connected nodes
+              function findConnectedNodes(currentNodeId) {
+                // Skip if we've already visited this node
+                if (visitedNodes.has(currentNodeId)) return;
+                visitedNodes.add(currentNodeId);
+                
+                // Find all edges connected to this node
+                svg.querySelectorAll("g.edge").forEach(edge => {
+                  const edgeId = getNodeId(edge);
+                  if (!edgeId) return;
+                  
+                  // Parse the edge ID (format: "source->target")
+                  const parts = edgeId.split("->");
+                  if (parts.length !== 2) return;
+                  
+                  const source = parts[0].trim();
+                  const target = parts[1].trim();
+                  
+                  // Check if this edge connects to our node
+                  if (source === currentNodeId || target === currentNodeId) {
+                    // Add edge to highlight list
+                    edgesToHighlight.add(edge);
+                    
+                    // Find the node on the other end
+                    const connectedNodeId = source === currentNodeId ? target : source;
+                    
+                    // Add connected node to highlight list
+                    nodesToHighlight.add(connectedNodeId);
+                    
+                    // Continue traversal with the connected node
+                    findConnectedNodes(connectedNodeId);
+                  }
+                });
+              }
+              
+              // Start recursive traversal from the clicked node
+              findConnectedNodes(clickedNodeId);
+              
+              // Apply highlighting to all collected nodes
+              svg.querySelectorAll("g.node").forEach(node => {
+                const id = getNodeId(node);
+                if (nodesToHighlight.has(id)) {
+                  node.classList.remove("faded");
+                  if (id === clickedNodeId) {
+                    // Only add the highlighted class to the original clicked node
+                    node.classList.add("highlighted");
+                  }
+                }
+              });
+              
+              // Apply highlighting to all collected edges
+              edgesToHighlight.forEach(edge => {
+                edge.classList.remove("faded");
+                edge.classList.add("highlighted");
+              });
+              
+              highlightMode = true;
+            } catch (error) {
+              console.error("Error highlighting node:", error);
+              showStatus("Error highlighting node");
+            }
+          }
+          
+          // Export SVG
+          function exportSvg() {
+            try {
+              const svg = graphContainer.querySelector("svg");
+              if (!svg) {
+                throw new Error("No SVG found to export");
+              }
+              
+              // Get SVG as a string
+              const serializer = new XMLSerializer();
+              const svgString = serializer.serializeToString(svg);
+              
+              // Send to VS Code extension
+              vscode.postMessage({
+                command: "exportSvg",
+                svgData: svgString,
+                title: document.title || "dependency-graph"
+              });
+              
+              showStatus("Preparing SVG export...");
+            } catch (error) {
+              console.error("Error exporting SVG:", error);
+              showStatus("Error exporting SVG: " + error.message);
+              
+              // Report error to VS Code
+              vscode.postMessage({
+                command: "error",
+                text: "SVG export error: " + error.message
+              });
+            }
+          }
+          
+          // Set up button event handlers
+          resetBtn.addEventListener("click", function() {
+            if (graphviz) {
+              graphviz.resetZoom();
+              showStatus("View reset");
+            }
           });
-        });
-        
-        // Start rendering after a short delay to ensure everything is loaded
-        setTimeout(() => {
-          showStatus("Starting graph rendering...");
+          
+          exportBtn.addEventListener("click", exportSvg);
+          
+          resetHighlightBtn.addEventListener("click", clearHighlighting);
+          
+          engineSelect.addEventListener("change", function() {
+            currentEngine = this.value;
+            showStatus("Switching to " + currentEngine + " engine");
+            renderGraph();
+          });
+          
+          // Initial render
           renderGraph();
-        }, 500);
-
-        // Export SVG functionality
-document.getElementById('exportSvg').addEventListener('click', () => {
-  try {
-    // Get the SVG element
-    const svgElement = document.querySelector('.graph-container svg');
-    if (!svgElement) {
-      throw new Error('SVG element not found');
-    }
-    
-    // Clone to avoid modifying the displayed SVG
-    const svgClone = svgElement.cloneNode(true);
-    
-    // Add XML declaration and namespace
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    
-    // Direct transmission of SVG data instead of URL
-    vscode.postMessage({
-      command: 'exportSvg',
-      svgData: svgData,
-      title: document.title || 'dependency-graph'
-    });
-    
-    showStatus("Preparing SVG export...");
-  } catch (error) {
-    showStatus("SVG export failed: " + error.message);
-    vscode.postMessage({
-      command: 'error',
-      text: 'SVG export failed: ' + (error instanceof Error ? error.message : String(error))
-    });
-  }
-});
+          
+          // Handle window resize
+          window.addEventListener("resize", function() {
+            if (graphviz) {
+              try {
+                graphviz.width("100%").height("100%");
+              } catch (err) {
+                // Ignore resize errors
+              }
+            }
+          });
+        })();
       </script>
     </body>
     </html>

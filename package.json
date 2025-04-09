@@ -39,7 +39,7 @@
         "title": "C#: Generate Dependency Graph"
       },
       {
-        "command": "csharp-dependency-graph.previewGraphviz",
+        "command": "vscode-csharp-dependency-graph.previewGraphviz",
         "title": "Preview Graphviz",
         "icon": {
           "light": "resources/icon-light.svg",
@@ -51,43 +51,51 @@
       "title": "C# Dependency Graph",
       "properties": {
         "csharpDependencyGraph.useSolutionFile": {
+          "order": 0,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Use **.sln files** when found to identify projects in the solution structure"
         },
         "csharpDependencyGraph.includeNetVersion": {
+          "order": 1,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Include **.NET target framework** version in the graph nodes"
         },
         "csharpDependencyGraph.includePackageDependenciesInProjectGraph": {
+          "order": 2,
           "type": "boolean",
           "default": false,
           "markdownDescription": "Include **NuGet package dependencies** in the project dependency graph"
         },
         "csharpDependencyGraph.classDependencyColor": {
+          "order": 3,
           "type": "string",
           "format": "color",
           "default": "lightgray",
           "markdownDescription": "Color for the classes in class dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.packageDependencyColor": {
+          "order": 4,
           "type": "string",
           "format": "color",
           "default": "#ffcccc",
           "markdownDescription": "Color for the packages in project dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
         "csharpDependencyGraph.excludeTestProjects": {
+          "order": 5,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Exclude test projects from the dependency graph"
         },
         "csharpDependencyGraph.openPreviewOnGraphvizFileOpen": {
+          "order": 6,
           "type": "boolean",
           "default": true,
           "markdownDescription": "(beta) Open automatically the new Graphviz preview on graphviz file"
         },
         "csharpDependencyGraph.testProjectPatterns": {
+          "order": 7,
           "type": "array",
           "default": [
             "*Test*",
@@ -97,6 +105,7 @@
           "markdownDescription": "Glob patterns to identify test projects to exclude"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
+          "order": 8,
           "type": "array",
           "default": [
             "**/obj/**",
@@ -125,7 +134,7 @@
       "editor/title": [
         {
           "when": "editorLangId == dot",
-          "command": "csharp-dependency-graph.previewGraphviz",
+          "command": "vscode-csharp-dependency-graph.previewGraphviz",
           "icon": {
             "light": "resources/icon-light.svg",
             "dark": "resources/icon-dark.svg"
