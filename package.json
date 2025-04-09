@@ -39,7 +39,7 @@
         "title": "C#: Generate Dependency Graph"
       },
       {
-        "command": "csharp-dependency-graph.previewGraphviz",
+        "command": "vscode-csharp-dependency-graph.previewGraphviz",
         "title": "Preview Graphviz",
         "icon": {
           "light": "resources/icon-light.svg",
@@ -134,7 +134,7 @@
       "editor/title": [
         {
           "when": "editorLangId == dot",
-          "command": "csharp-dependency-graph.previewGraphviz",
+          "command": "vscode-csharp-dependency-graph.previewGraphviz",
           "icon": {
             "light": "resources/icon-light.svg",
             "dark": "resources/icon-dark.svg"

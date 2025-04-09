@@ -15,13 +15,15 @@ export class GraphPreviewProvider {
     // If a panel is already open, show it and update its content
     if (this._panel) {
       this._panel.reveal();
+      // Also update the panel title when showing a new preview
+      this._panel.title = title;
       this._updateContent(dotContent);
       return;
     }
 
     // Otherwise, create a new panel
     this._panel = vscode.window.createWebviewPanel(
-      "csharp-dependency-graph",
+      "vscode-csharp-dependency-graph",
       title,
       vscode.ViewColumn.Beside,
       {
