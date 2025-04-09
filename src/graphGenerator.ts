@@ -224,7 +224,7 @@ function findTargetClass(
 
 function injectHeadOfDotFile() {
   let dotContent = 'digraph CSharpDependencies {\n';
-  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=ortho];\n';
+  dotContent += '  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=sprite, overlap=false, nodesep=0.2, ranksep=0.8];\n';
   dotContent += '  node [shape=box, style=filled, fillcolor=lightblue, fontname="Helvetica", fontsize=11];\n';
   dotContent += '  edge [fontname="Helvetica", fontsize=9];\n\n';
   return dotContent;

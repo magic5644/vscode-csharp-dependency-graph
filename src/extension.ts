@@ -45,10 +45,20 @@ function isPathMatchingAnyPattern(
 }
 
 function sanitizeDotContent(dotContent: string): string {
-  // Verify that content looks like a DOT graph
-  const dotGraphRegex = /^\s*(di)?graph\s+[\w"{}]/i;
+  // Verify that content looks like a DOT graph - Limit characters to avoid excessive backtracking
+  const dotGraphRegex = /^\s*(?:di)?graph\s+[\w"{}][^\n]{0,100}/i;
   if (!dotGraphRegex.exec(dotContent.trim())) {
     console.warn("Warning: Content doesn't appear to be a valid DOT graph");
+  }
+
+  // Add global graph attributes to improve edge rendering
+  if (dotContent.includes('digraph') && !dotContent.includes('splines=')) {
+    // Add graph attributes to optimize rendering, especially when multiple edges are close
+    // Utiliser une regex plus simple et plus sûre
+    dotContent = dotContent.replace(
+      /digraph\s+[\w"]+\s*\{/i,
+      match => `${match}\n  // Graph attributes for better edge rendering\n  graph [splines=polyline, overlap=false, nodesep=0.8, ranksep=1.0];\n  edge [penwidth=1.5, arrowsize=0.8];\n  node [shape=box, style=filled, fillcolor=aliceblue];\n`
+    );
   }
 
   // Sanitize HTML in label attributes
@@ -64,20 +74,14 @@ function sanitizeDotContent(dotContent: string): string {
   );
 
   // Fix common issues with node/edge definitions that can cause rendering problems
-  dotContent = dotContent
-    // Ensure node IDs with special characters are properly quoted
-    .replace(/^(\s*)(\w+[^\w"\s;][\w\-./\\]+)(\s*\[)/gm, '$1"$2"$3')
-    
+  dotContent = dotContent 
     // Ensure proper spacing in edge definitions
     .replace(/->(\S)/g, '-> $1')
     
-    // Fix issues with quotes within node attributes
-    .replace(/label\s*=\s*"([^"]*?)"/g, (match) => {
+    // Fix issues with quotes within node attributes - Pas de backtracking possible
+    .replace(/label\s*=\s*"([^"]*)"/g, (match) => {
       return match.replace(/\\"/g, '\\\\"');
     })
-    
-    // Make sure all node/edge statements end with a semicolon
-    .replace(/^(\s*"?[^"\s;{]+?"?\s*(\[[^\]]+\])?\s*)$/gm, '$1;');
 
   return dotContent;
 }

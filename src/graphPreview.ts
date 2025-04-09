@@ -10,7 +10,11 @@ export class GraphPreviewProvider {
     this._extensionUri = extensionUri;
   }
 
-  public showPreview(dotContent: string, title: string, sourceFilePath?: string): void {
+  public showPreview(
+    dotContent: string,
+    title: string,
+    sourceFilePath?: string
+  ): void {
     this._sourceFilePath = sourceFilePath;
     // If a panel is already open, show it and update its content
     if (this._panel) {
@@ -49,42 +53,52 @@ export class GraphPreviewProvider {
         try {
           // Direct use of SVG data
           const svgContent = message.svgData;
-          
+
           // Determine the default directory based on the source file
           let defaultUri;
           if (this._sourceFilePath) {
             // Use the directory of the DOT source file
             const sourceDir = path.dirname(this._sourceFilePath);
             // Get the basename without extension and use it for the SVG file
-            const baseName = path.basename(this._sourceFilePath, path.extname(this._sourceFilePath));
+            const baseName = path.basename(
+              this._sourceFilePath,
+              path.extname(this._sourceFilePath)
+            );
             const fileName = `${baseName}.svg`;
             defaultUri = vscode.Uri.file(path.join(sourceDir, fileName));
           } else {
             // Fallback if no source file (generated from command)
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : '';
-            defaultUri = vscode.Uri.file(path.join(baseDir, `${message.title || 'dependency-graph'}.svg`));
+            const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : "";
+            defaultUri = vscode.Uri.file(
+              path.join(baseDir, `${message.title || "dependency-graph"}.svg`)
+            );
           }
-          
+
           // Show save dialog
           const saveUri = await vscode.window.showSaveDialog({
             defaultUri: defaultUri,
             filters: {
-              'SVG Files': ['svg'],
-              'All Files': ['*']
+              "SVG Files": ["svg"],
+              "All Files": ["*"],
             },
-            title: 'Export SVG'
+            title: "Export SVG",
           });
-          
+
           if (saveUri) {
             // Write SVG content to file
-            const writeData = Buffer.from(svgContent, 'utf8');
+            const writeData = Buffer.from(svgContent, "utf8");
             await vscode.workspace.fs.writeFile(saveUri, writeData);
-            vscode.window.showInformationMessage(`SVG exported to ${saveUri.fsPath}`);
+            vscode.window.showInformationMessage(
+              `SVG exported to ${saveUri.fsPath}`
+            );
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          vscode.window.showErrorMessage(`Failed to export SVG: ${errorMessage}`);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(
+            `Failed to export SVG: ${errorMessage}`
+          );
         }
       }
     });
@@ -238,6 +252,11 @@ export class GraphPreviewProvider {
         .edge.highlighted path {
           stroke: #ff6600 !important;
           stroke-width: 2px !important;
+        }
+
+        .edge.highlighted polygon {
+        stroke: #ff6600 !important;
+        fill: #ff6600 !important;
         }
         
         .edge.faded {

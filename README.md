@@ -19,6 +19,8 @@ See [CHANGELOG.md](./CHANGELOG.md) for a list of changes in README.md
 - **Exclude test projects**: Option to exclude test projects from the analysis
 - **DOT file output**: Generate standard DOT files for use with internal preview feature or other visualization tools like Graphviz
 - **Preview Graphviz**: Preview Graphviz on graphviz file open (beta)
+- **Highlight dependencies**: Highlight dependencies in the preview graph (beta)
+- **Customizable colors**: Customize the colors of classes and packages in the graph
 - **Preview configuration options**: Preview configuration options in settings
 - **Export graph as SVG**: Export the generated graph as an SVG file for easy sharing and embedding
 

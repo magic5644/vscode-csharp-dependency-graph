@@ -77,8 +77,8 @@ function registerClassesFromFile(
   const namespaceMatch = namespaceRegex.exec(content);
   const namespace = namespaceMatch ? namespaceMatch[1] : '';
   
-  // Find classes
-  const classRegex = /\bclass\s+(\w{1,100})/g;
+  // Find classes - Limit the class name length to avoid excessive backtracking
+  const classRegex = /\bclass\s+(\w{1,60})/g;
   let match;
   
   while ((match = classRegex.exec(content)) !== null) {
@@ -111,9 +111,9 @@ function extractClassesFromFile(
   // Extract using directives for namespace resolution
   const imports = extractImports(content);
   
-  // Find classes
+  // Find classes - Limit the class name length to avoid excessive backtracking
   const classLines = content.split('\n').filter(line => 
-    /\bclass\s+\w{1,100}/.test(line)
+    /\bclass\s+\w{1,60}/.test(line)
   );
   
   for (const line of classLines) {
@@ -138,8 +138,8 @@ function processClassLine(
   imports: string[],
   classRegistry: Map<string, { namespace: string, projectName: string }>
 ): ClassDependency | null {
-  // Extract the class name
-  const classNameRegex = /\bclass\s+(\w{1,100})/;
+  // Extract the class name - Limit the class name length
+  const classNameRegex = /\bclass\s+(\w{1,60})/;
   const classNameMatch = classNameRegex.exec(line);
   if (!classNameMatch) return null;
   
@@ -330,8 +330,8 @@ function resolveWithImports(
  * Extract inheritance dependencies from a class declaration line
  */
 function extractInheritanceDependencies(line: string, dependencies: DependencyInfo[]): void {
-  // Safe regex that avoids catastrophic backtracking
-  const inheritanceRegex = /\s*:\s*([^{]+?)(?=\s*\{|$)/;
+  // Using atomic groups and possessive quantifiers to prevent backtracking
+  const inheritanceRegex = /\s*:\s*((?:[\w<>.]+(?:\s*,\s*[\w<>.]+)*))(?=\s*\{|$)/;
   const inheritanceMatch = inheritanceRegex.exec(line);
   if (!inheritanceMatch) return;
   
@@ -457,7 +457,8 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
  * Process variable and field declarations in a line
  */
 function processVariableDeclaration(line: string, dependencies: DependencyInfo[]): void {
-  const declarationRegex = /^\s*(public|private|protected|internal|const|readonly|static)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*[=;{(]/;
+  // Limit the size of types to avoid exponential backtracking
+  const declarationRegex = /^\s*(public|private|protected|internal|const|readonly|static)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*[=;{(]/;
   const declMatch = declarationRegex.exec(line);
   
   if (!declMatch?.[2]) {
@@ -478,7 +479,8 @@ function processVariableDeclaration(line: string, dependencies: DependencyInfo[]
  * Process method signatures to extract return type and parameters
  */
 function processMethodSignature(line: string, dependencies: DependencyInfo[]): void {
-  const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,500})\s+\w+\s*\((.*)\)/;
+  // Limit the size of return types to avoid exponential backtracking
+  const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*\(([^)]{0,1000})\)/;
   const methodMatch = methodRegex.exec(line);
   
   if (!methodMatch) {

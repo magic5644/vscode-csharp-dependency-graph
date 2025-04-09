@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.6] - 2025-04-09
+
+- **Added** Highlight dependencies in the preview graph (beta)
+- **Added** Customize the colors of classes and packages in the graph (beta)
+- **Updated** Modify dependencies lines representations in graph
+- **Updated** Update dependencies
+
 ## [0.6.5] - 2025-03-28
 
 - **Fixed** Fix security issues
