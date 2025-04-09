@@ -45,11 +45,14 @@ function isPathMatchingAnyPattern(
 }
 
 function sanitizeDotContent(dotContent: string): string {
+  // Verify that content looks like a DOT graph
   const dotGraphRegex = /^\s*(di)?graph\s+[\w"{}]/i;
   if (!dotGraphRegex.exec(dotContent.trim())) {
     console.warn("Warning: Content doesn't appear to be a valid DOT graph");
   }
-  return dotContent.replace(
+
+  // Sanitize HTML in label attributes
+  dotContent = dotContent.replace(
     /label\s*=\s*["']([^"']*)["']/gi,
     (_match, labelContent) => {
       const sanitized = sanitizeHtml(labelContent, {
@@ -59,6 +62,24 @@ function sanitizeDotContent(dotContent: string): string {
       return `label="${sanitized}"`;
     }
   );
+
+  // Fix common issues with node/edge definitions that can cause rendering problems
+  dotContent = dotContent
+    // Ensure node IDs with special characters are properly quoted
+    .replace(/^(\s*)(\w+[^\w"\s;][\w\-./\\]+)(\s*\[)/gm, '$1"$2"$3')
+    
+    // Ensure proper spacing in edge definitions
+    .replace(/->(\S)/g, '-> $1')
+    
+    // Fix issues with quotes within node attributes
+    .replace(/label\s*=\s*"([^"]*?)"/g, (match) => {
+      return match.replace(/\\"/g, '\\\\"');
+    })
+    
+    // Make sure all node/edge statements end with a semicolon
+    .replace(/^(\s*"?[^"\s;{]+?"?\s*(\[[^\]]+\])?\s*)$/gm, '$1;');
+
+  return dotContent;
 }
 
 export async function activate(context: vscode.ExtensionContext) {
