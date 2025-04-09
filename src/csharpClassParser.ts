@@ -78,7 +78,8 @@ function registerClassesFromFile(
   const namespace = namespaceMatch ? namespaceMatch[1] : '';
   
   // Find classes - Limit the class name length to avoid excessive backtracking
-  const classRegex = /\bclass\s+(\w{1,60})/g;
+  const MAX_CLASS_NAME_LENGTH = 60;
+  const classRegex = new RegExp(`\\bclass\\s+(\\w{1,${MAX_CLASS_NAME_LENGTH}})`, 'g');
   let match;
   
   while ((match = classRegex.exec(content)) !== null) {
@@ -481,6 +482,7 @@ function processVariableDeclaration(line: string, dependencies: DependencyInfo[]
 function processMethodSignature(line: string, dependencies: DependencyInfo[]): void {
   // Limit the size of return types to avoid exponential backtracking
   const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*\(([^)]{0,1000})\)/;
+  
   const methodMatch = methodRegex.exec(line);
   
   if (!methodMatch) {
