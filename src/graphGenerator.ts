@@ -101,7 +101,7 @@ function generateProjectEdges(projects: Project[]): string {
   
   for (const project of projects) {
     for (const dependency of project.dependencies) {
-      dotContent += `  "${project.name}" -> "${dependency}";\n`;
+      dotContent += `  "${project.name}" -> "${dependency}" [penwidth=1.0];\n`;
     }
   }
   
@@ -116,7 +116,7 @@ function generatePackageEdges(projects: Project[]): string {
   
   for (const project of projects) {
     for (const pkg of project.packageDependencies) {
-      dotContent += `  "${project.name}" -> "${pkg.name}" [style=dashed];\n`;
+      dotContent += `  "${project.name}" -> "${pkg.name}" [style=dashed, penwidth=0.5];\n`;
     }
   }
   
@@ -188,7 +188,7 @@ function generateClassDependencyEdges(classDependencies: ClassDependency[]): str
       
       if (targetClass) {
         const targetNodeId = `"${targetClass.projectName}.${targetClass.className}"`;
-        dotContent += `  ${sourceNodeId} -> ${targetNodeId};\n`;
+        dotContent += `  ${sourceNodeId} -> ${targetNodeId} [penwidth=1.5];\n`;
       }
     }
   }
