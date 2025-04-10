@@ -169,21 +169,6 @@ function sanitizeDotContent(dotContent: string): string {
     .replace(/(di)?graph\s+(\w+\s+\w+)(\s*{)/gi, (_match, di, name, bracket) => {
       return `${di || ''}graph "${name}"${bracket}`;
     });
-    
-  // Final check for any remaining single quotes that might cause problems
-  // This is a safety net for any cases the above regex patterns missed
-  dotContent = dotContent.replace(
-    /'([^']*?)'/g,
-    (_match, content) => {
-      // Handle newlines in these cases too
-      const sanitized = content
-        .replace(/\\n/g, '<br/>')
-        .replace(/\\r\\n/g, '<br/>')
-        .replace(/\\r/g, '<br/>')
-        .replace(/"/g, '\\"');
-      return `"${sanitized}"`;
-    }
-  );
 
   return dotContent;
 }
