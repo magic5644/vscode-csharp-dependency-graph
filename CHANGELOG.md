@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.7] - 2025-04-15
+
+- **Fixed** Render preview sometimes failed to load when opening a .dot file with specials characters in content
+
 ## [0.6.6] - 2025-04-09
 
 - **Added** Highlight dependencies in the preview graph (beta)
