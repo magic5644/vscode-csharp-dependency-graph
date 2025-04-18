@@ -71,7 +71,7 @@ export class GraphPreviewProvider {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             const baseDir = workspaceFolder ? workspaceFolder.uri.fsPath : "";
             defaultUri = vscode.Uri.file(
-              path.join(baseDir, `${message.title || "dependency-graph"}.svg`)
+              path.join(baseDir, `${message.title ?? "dependency-graph"}.svg`)
             );
           }
 
@@ -358,20 +358,37 @@ export class GraphPreviewProvider {
           function renderGraph() {
             try {
               if (!graphviz) throw new Error("Graphviz not initialized");
-              
+         
               showStatus("Rendering graph with " + currentEngine);
               
-              graphviz
+              const result = graphviz
                 .engine(currentEngine)
                 .renderDot(dotSource)
                 .on("end", function() {
                   setupInteractivity();
                   setupZoomBehavior();
+                })
+                .onerror(function(error) {
+                  console.error("Graph rendering error:", error);
+                  showStatus("Error: " + error);
                 });
+
+              showStatus("Rendering complete "+ (result.status ? ": " + result.status : ""));
+              if (result.status !== undefined && result.status != "success") {
+                showStatus(result.errors && result.errors.length > 0 && result.errors[0] || result);
+              }
                 
             } catch (error) {
               console.error("Error rendering graph:", error);
-              showStatus("Error: " + error.message);
+              showStatus("Error: " + error);
+
+              // Notify VS Code about the error
+              if (vscode) {
+                vscode.postMessage({
+                  command: "error",
+                  text: "Graph rendering error: " + error
+                });
+              }
             }
           }
           
