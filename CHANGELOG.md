@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.6.8] - 2025-04-18
+
+- **Updated** Render preview and add more comprehensive error handling
+- **Updated** Sanitize the content of the preview graph
+
 ## [0.6.7] - 2025-04-15
 
 - **Fixed** Render preview sometimes failed to load when opening a .dot file with specials characters in content
