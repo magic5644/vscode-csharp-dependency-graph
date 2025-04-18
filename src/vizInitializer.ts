@@ -9,7 +9,7 @@ import * as path from 'path';
  */
 export async function prepareVizJs(extensionUri: vscode.Uri): Promise<boolean> {
   try {
-    // Creating resources/js directory if it doesn't exist
+    // Create resources/js directory if it doesn't exist
     const resourcesJsDir = path.join(extensionUri.fsPath, 'resources', 'js');
     console.log(`Checking resources directory: ${resourcesJsDir}`);
     

@@ -10,7 +10,7 @@ import { findSolutionFiles, parseSolutionFile } from "./slnParser";
 import { minimatch } from "minimatch";
 import { GraphPreviewProvider } from "./graphPreview";
 import { prepareVizJs } from "./vizInitializer";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeDotContent } from './dotSanitizer';
 
 interface DependencyGraphConfig {
   includeNetVersion: boolean;
@@ -24,9 +24,6 @@ interface DependencyGraphConfig {
   openPreviewOnGraphvizFileOpen: boolean;
 }
 
-/**
- * Checks if a file path matches a given pattern
- */
 function isPathMatchingPattern(filePath: string, pattern: string): boolean {
   const fileName = path.basename(filePath);
   return pattern.includes("/")
@@ -44,134 +41,11 @@ function isPathMatchingAnyPattern(
   return patterns.some((pattern) => isPathMatchingPattern(filePath, pattern));
 }
 
-function sanitizeDotContent(dotContent: string): string {
-  // Check that the content looks like a DOT graph
-  const dotGraphRegex = /^\s*(?:di)?graph\s+[\w"{}][^\n]{0,100}/i;
-  if (!dotGraphRegex.exec(dotContent.trim())) {
-    console.warn("Warning: Content doesn't appear to be a valid DOT graph");
-  }
-
-  // Add global attributes to improve edge rendering
-  if (dotContent.includes('digraph') && !dotContent.includes('splines=')) {
-    dotContent = dotContent.replace(
-      /digraph\s+[\w"]+\s*\{/i,
-      match => `${match}\n  // Graph attributes for better edge rendering\n  graph [splines=polyline, overlap=false, nodesep=0.8, ranksep=1.0];\n  edge [penwidth=1.5, arrowsize=0.8];\n  node [shape=box, style=filled, fillcolor=aliceblue];\n`
-    );
-  }
-
-  // Handle both single and double quoted node IDs that might contain apostrophes
-  dotContent = dotContent.replace(
-    /"([^"]*?)"/g,
-    (_match, nodeId) => {
-      // Replace apostrophes and other special characters in node IDs
-      const sanitized = nodeId
-        .replace(/'/g, '&#39;')
-      return `"${sanitized}"`;
-    }
-  );
-
-  // Handle attributes with label properties - preserving newlines
-  dotContent = dotContent.replace(
-    /\[([^\]]*?)label\s*=\s*(?:"([^"]*)"|'([^']*)')([^\]]*?)\]/g,
-    (_match, beforeLabel, doubleQuotedContent, singleQuotedContent, afterLabel) => {
-      // Handle newlines in label content - use the non-undefined content
-      const labelContent = doubleQuotedContent !== undefined ? doubleQuotedContent : singleQuotedContent;
-      
-      let sanitized = sanitizeHtml(labelContent, {
-        allowedTags: [],
-        allowedAttributes: {},
-      });
-      
-      // Preserve valid newlines sequences
-      sanitized = sanitized
-        .replace(/'/g, '&#39;')      // Ensure apostrophes are HTML escaped
-        .replace(/"/g, '&quot;')     // Ensure quotes are HTML escaped
-      
-      return `[${beforeLabel}label="${sanitized}"${afterLabel}]`;
-    }
-  );
-
-  // Handle all other attributes - using a more direct approach to ensure all apostrophes are caught
-  dotContent = dotContent.replace(
-    /=\s*["']([^"']*?)["']/g,
-    (_match, attrContent) => {
-      // Handle newlines and other special characters
-      const sanitized = attrContent
-        .replace(/'/g, '&#39;')      // Apostrophes
-        .replace(/"/g, '&quot;')     // Double quotes
-        // Acute accents
-        .replace(/é/g, '&#233;')
-        .replace(/É/g, '&#201;')
-        .replace(/á/g, '&#225;')
-        .replace(/Á/g, '&#193;')
-        .replace(/í/g, '&#237;')
-        .replace(/Í/g, '&#205;')
-        .replace(/ó/g, '&#243;')
-        .replace(/Ó/g, '&#211;')
-        .replace(/ú/g, '&#250;')
-        .replace(/Ú/g, '&#218;')
-        .replace(/ý/g, '&#253;')
-        .replace(/Ý/g, '&#221;')
-        // Grave accents
-        .replace(/è/g, '&#232;')
-        .replace(/È/g, '&#200;')
-        .replace(/à/g, '&#224;')
-        .replace(/À/g, '&#192;')
-        .replace(/ì/g, '&#236;')
-        .replace(/Ì/g, '&#204;')
-        .replace(/ò/g, '&#242;')
-        .replace(/Ò/g, '&#210;')
-        .replace(/ù/g, '&#249;')
-        .replace(/Ù/g, '&#217;')
-        // Circumflex
-        .replace(/ê/g, '&#234;')
-        .replace(/Ê/g, '&#202;')
-        .replace(/â/g, '&#226;')
-        .replace(/Â/g, '&#194;')
-        .replace(/î/g, '&#238;')
-        .replace(/Î/g, '&#206;')
-        .replace(/ô/g, '&#244;')
-        .replace(/Ô/g, '&#212;')
-        .replace(/û/g, '&#251;')
-        .replace(/Û/g, '&#219;')
-        // Diaeresis
-        .replace(/ë/g, '&#235;')
-        .replace(/Ë/g, '&#203;')
-        .replace(/ä/g, '&#228;')
-        .replace(/Ä/g, '&#196;')
-        .replace(/ï/g, '&#239;')
-        .replace(/Ï/g, '&#207;')
-        .replace(/ö/g, '&#246;')
-        .replace(/Ö/g, '&#214;')
-        .replace(/ü/g, '&#252;')
-        .replace(/Ü/g, '&#220;')
-        .replace(/ÿ/g, '&#255;')
-        // Other special characters
-        .replace(/ç/g, '&#231;')
-        .replace(/Ç/g, '&#199;')
-        .replace(/ñ/g, '&#241;')
-        .replace(/Ñ/g, '&#209;')
-        .replace(/œ/g, '&#339;')
-        .replace(/Œ/g, '&#338;')
-        .replace(/æ/g, '&#230;')
-        .replace(/Æ/g, '&#198;');
-      
-      return `="${sanitized}"`;
-    }
-  );
-
-  // Fix common edge syntax issues
-  dotContent = dotContent 
-    // Ensure adequate spacing in edge definitions
-    .replace(/->(\S)/g, '-> $1')
-    
-    // Additional fix for graph identifiers with spaces
-    .replace(/(di)?graph\s+(\w+\s+\w+)(\s*{)/gi, (_match, di, name, bracket) => {
-      return `${di || ''}graph "${name}"${bracket}`;
-    });
-
-  return dotContent;
-}
+/**
+ * Enhances a graph with default styling attributes if they're not already present
+ * @param content The DOT graph content
+ * @returns Enhanced DOT graph content
+ */
 
 export async function activate(context: vscode.ExtensionContext) {
   try {
@@ -443,9 +317,7 @@ async function generateAndSaveGraph(
       projects.forEach(project => {
         project.packageDependencies = project.packageDependencies || [];
         // Ensure targetFramework is always defined to meet Project interface requirements
-        if (project.targetFramework === undefined) {
-          project.targetFramework = "unknown";
-        }
+        project.targetFramework ??= "unknown";
       });
 
       let dotContent: string;
@@ -494,8 +366,9 @@ async function generateAndSaveGraph(
       } else if (selection === "Preview") {
         const dotContent = fs.readFileSync(filePath, "utf8");
         const title = path.basename(filePath);
+        const sanitizeResult = sanitizeDotContent(dotContent);
         graphPreviewProvider.showPreview(
-          sanitizeDotContent(dotContent),
+          sanitizeResult.content,
           title,
           filePath
         );
@@ -617,8 +490,9 @@ function registerGraphvizPreviewCommand(
         ) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
+          const sanitizeResult = sanitizeDotContent(dotContent);
           graphPreviewProvider.showPreview(
-            sanitizeDotContent(dotContent),
+            sanitizeResult.content,
             title,
             editor.document.fileName
           );
@@ -663,8 +537,9 @@ function setupAutoPreview(
         
         const dotContent = document.getText();
         const title = path.basename(document.fileName);
+        const sanitizeResult = sanitizeDotContent(dotContent);
         graphPreviewProvider.showPreview(
-          sanitizeDotContent(dotContent),
+          sanitizeResult.content,
           title,
           document.fileName
         );

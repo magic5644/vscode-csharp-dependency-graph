@@ -149,27 +149,28 @@
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
-    "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "pretest": "npm run test-compile && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "lint-and-test": "npm run lint && npm run test"
+    "lint-and-test": "npm run lint && npm run test",
+    "test-compile": "tsc -p . --outDir out"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^16.18.126",
-    "@types/sanitize-html": "^2.15.0",
+    "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.98.0",
     "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
+    "@vscode/test-electron": "^2.5.2",
     "eslint": "^8.57.1",
     "glob": "^10.4.5",
     "mocha": "^10.8.2",
+    "sinon": "^20.0.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.2",
     "webpack": "^5.98.0",
@@ -180,7 +181,6 @@
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
     "minimatch": "^9.0.5",
-    "sanitize-html": "^2.15.0",
     "xml2js": "^0.6.2"
   }
 }
