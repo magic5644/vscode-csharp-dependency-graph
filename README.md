@@ -142,6 +142,8 @@ The extension works by:
    - Static method calls
    - Object instantiations
 4. Generating a DOT file representation of the dependency graph
+5. Analyzing cycles in dependencies
+6. Generating a report of cycles in dependencies
 
 ## Code organization
 
@@ -154,7 +156,7 @@ classDiagram
   }
 
   class GraphGenerator {
-      +generateDotFile(projects: Project[], options: GraphOptions, classDependencies?: ClassDependency[]): string
+      +generateDotFile(projects: Project[], options: GraphOptions): string
       +generateClassDependencyGraph(projects: Project[], classDependencies: ClassDependency[], options: GraphOptions): string
   }
 
@@ -180,7 +182,7 @@ classDiagram
   }
   
   class GraphPreviewProvider {
-      +showPreview(dotContent: string, title: string): void
+      +showPreview(dotContent: string, title: string, sourceFilePath?: string, cyclesOnlyDotContent?: string): void
       -_updateContent(dotContent: string): void
   }
   
@@ -188,16 +190,35 @@ classDiagram
       +prepareVizJs(extensionUri: vscode.Uri): Promise<boolean>
   }
 
+  class CycleDetector {
+      +detectProjectCycles(projects: Project[]): CycleAnalysisResult
+      +detectClassCycles(classes: ClassDependency[]): CycleAnalysisResult
+      +generateDotWithHighlightedCycles(dotContent: string, cycles: Cycle[]): string
+      +generateCyclesOnlyGraph(cycles: Cycle[]): string
+      +generateCycleReport(cycles: Cycle[]): string
+  }
+
+  class DotSanitizer {
+      +sanitizeDotContent(dotContent: string): {content: string, invalidGraphWarning: boolean}
+      +enhanceGraphWithDefaultAttributes(content: string): string
+      +isValidDotGraph(content: string): boolean
+      +sanitizeStringValue(value: string): string
+  }
+
   Extension --> GraphGenerator
   Extension --> CsprojFinder
   Extension --> CsprojParser
+  Extension --> CycleDetector
   Extension --> CsharpSourceFinder
   Extension --> CsharpClassParser
   Extension --> SlnParser
   Extension --> GraphPreviewProvider
   Extension --> VizInitializer
+  Extension --> DotSanitizer
   CsprojFinder --> SlnParser
-  GraphPreview ..> VizInitializer: uses
+  GraphPreviewProvider ..> VizInitializer: uses
+  GraphPreviewProvider ..> DotSanitizer: uses
+  Extension ..> DotSanitizer: uses
 ```
 
 ## Known Issues
