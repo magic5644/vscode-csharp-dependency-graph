@@ -764,10 +764,13 @@ function registerCycleAnalysisCommands(
             
             // Preview the highlighted graph
             const sanitizeResult = sanitizeDotContent(highlightedDotContent);
+            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
             graphPreviewProvider.showPreview(
               sanitizeResult.content,
               `${lastGraphTitle} (With Cycles)`,
-              dotFilePath
+              dotFilePath,
+              cyclesOnlySanitized.content // Pass the cycles-only content
             );
           });
           
@@ -845,7 +848,8 @@ function showCyclesOnlyGraph(graphPreviewProvider: GraphPreviewProvider): void {
   graphPreviewProvider.showPreview(
     sanitizeResult.content,
     `${lastGraphTitle} (Cycles Only)`,
-    undefined
+    undefined,
+    sanitizeResult.content // Pass the same content as cyclesOnlyDotContent
   );
 }
 

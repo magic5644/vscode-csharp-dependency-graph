@@ -5,6 +5,9 @@ export class GraphPreviewProvider {
   private _panel: vscode.WebviewPanel | undefined;
   private readonly _extensionUri: vscode.Uri;
   private _sourceFilePath: string | undefined;
+  private _dotContent: string = "";
+  private _cyclesOnlyDotContent: string | undefined;
+  private _hasCycles: boolean = false;
 
   constructor(extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
@@ -13,9 +16,14 @@ export class GraphPreviewProvider {
   public showPreview(
     dotContent: string,
     title: string,
-    sourceFilePath?: string
+    sourceFilePath?: string,
+    cyclesOnlyDotContent?: string
   ): void {
     this._sourceFilePath = sourceFilePath;
+    this._dotContent = dotContent;
+    this._cyclesOnlyDotContent = cyclesOnlyDotContent;
+    this._hasCycles = !!cyclesOnlyDotContent; // Si on a du contenu pour cycles-only, alors il y a des cycles
+    
     // If a panel is already open, show it and update its content
     if (this._panel) {
       this._panel.reveal();
@@ -198,6 +206,15 @@ export class GraphPreviewProvider {
         button:hover {
           background: #f5f5f5;
         }
+        button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        button.active {
+          background: #007acc;
+          color: #fff;
+          border-color: #007acc;
+        }
         .engine-selector {
           display: flex;
           align-items: center;
@@ -269,6 +286,7 @@ export class GraphPreviewProvider {
         <button id="resetBtn">Reset View</button>
         <button id="exportBtn">Export SVG</button>
         <button id="resetHighlightBtn">Clear Highlight</button>
+        <button id="toggleCyclesBtn" ${!this._hasCycles ? 'disabled' : ''}>Show Cycles Only</button>
         <div class="engine-selector">
           <label for="engineSelect">Engine:</label>
           <select id="engineSelect">
@@ -295,6 +313,10 @@ export class GraphPreviewProvider {
           let highlightMode = false;
           let dotSource = ${JSON.stringify(dotContent)};
           let zoomBehavior;
+          let isShowingCyclesOnly = false;
+          let normalDotSource = ${JSON.stringify(dotContent)};
+          let cyclesOnlyDotSource = ${JSON.stringify(this._cyclesOnlyDotContent || "")};
+          let hasCycles = ${this._hasCycles};
           
           // DOM elements
           const graphContainer = document.querySelector(".graph-container");
@@ -303,6 +325,7 @@ export class GraphPreviewProvider {
           const resetBtn = document.getElementById("resetBtn");
           const exportBtn = document.getElementById("exportBtn");
           const resetHighlightBtn = document.getElementById("resetHighlightBtn");
+          const toggleCyclesBtn = document.getElementById("toggleCyclesBtn");
           
           // Message handler to communicate with VS Code extension
           const vscode = acquireVsCodeApi();
@@ -352,6 +375,23 @@ export class GraphPreviewProvider {
             console.error("Failed to initialize graphviz:", error);
             showStatus("Error: " + error.message);
             graphviz = null; // Ensure we don't use a partially initialized instance
+          }
+          
+          // Toggle between normal and cycles-only view
+          function toggleCyclesView() {
+            isShowingCyclesOnly = !isShowingCyclesOnly;
+            
+            // Update button appearance
+            toggleCyclesBtn.textContent = isShowingCyclesOnly ? "Show Full Graph" : "Show Cycles Only";
+            toggleCyclesBtn.classList.toggle("active", isShowingCyclesOnly);
+            
+            // Switch the DOT source
+            dotSource = isShowingCyclesOnly ? cyclesOnlyDotSource : normalDotSource;
+            
+            // Re-render the graph
+            renderGraph();
+            
+            showStatus(isShowingCyclesOnly ? "Showing cycles only" : "Showing full graph");
           }
           
           // Create the graph
@@ -643,6 +683,11 @@ export class GraphPreviewProvider {
           exportBtn.addEventListener("click", exportSvg);
           
           resetHighlightBtn.addEventListener("click", clearHighlighting);
+          
+          // Add event listener for the toggle cycles button
+          if (hasCycles) {
+            toggleCyclesBtn.addEventListener("click", toggleCyclesView);
+          }
           
           engineSelect.addEventListener("change", function() {
             currentEngine = this.value;
