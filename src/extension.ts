@@ -554,7 +554,7 @@ function registerGraphvizPreviewCommand(
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-csharp-dependency-graph.previewGraphviz",
-      () => {
+      async () => {
         const editor = vscode.window.activeTextEditor;
         if (
           editor &&
@@ -564,11 +564,30 @@ function registerGraphvizPreviewCommand(
         ) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
+          
+          // Store content and title for later use (for cycle analysis)
+          lastDotContent = dotContent;
+          lastGraphTitle = title;
+          
+          // Analyze cycles in the graph before showing preview
+          await analyzeCyclesInDotContent(dotContent, editor.document.fileName);
+          
+          // Now show the preview with cycle data
           const sanitizeResult = sanitizeDotContent(dotContent);
+          
+          // Only create cycles-only content if cycles were detected
+          let cyclesOnlyContent = undefined;
+          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+            cyclesOnlyContent = cyclesOnlySanitized.content;
+          }
+          
           graphPreviewProvider.showPreview(
             sanitizeResult.content,
             title,
-            editor.document.fileName
+            editor.document.fileName,
+            cyclesOnlyContent
           );
         } else {
           vscode.window.showErrorMessage(
@@ -578,6 +597,87 @@ function registerGraphvizPreviewCommand(
       }
     )
   );
+}
+
+/**
+ * Analyzes the cycles in a DOT content without showing UI feedback
+ */
+async function analyzeCyclesInDotContent(dotContent: string, _filePath: string): Promise<void> {
+  try {
+    // Extract nodes and edges from DOT content
+    const nodeRegex = /"([^"]+)"\s*\[/g;
+    const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/g;
+    
+    const nodes = new Set<string>();
+    const edges = new Map<string, string[]>();
+    
+    let match;
+    while ((match = nodeRegex.exec(dotContent)) !== null) {
+      nodes.add(match[1]);
+    }
+    
+    // Reset lastIndex to start from the beginning
+    edgeRegex.lastIndex = 0;
+    
+    while ((match = edgeRegex.exec(dotContent)) !== null) {
+      const source = match[1];
+      const target = match[2];
+      
+      if (!edges.has(source)) {
+        edges.set(source, []);
+      }
+      
+      edges.get(source)!.push(target);
+    }
+    
+    // Determine if it's a class graph or project graph
+    const isClassGraph = dotContent.includes("cluster_");
+    
+    if (isClassGraph) {
+      // Create a simulated class dependency structure
+      const simClasses = Array.from(nodes).map(nodeName => {
+        // Extract project name and class name (if in format "ProjectName.ClassName")
+        const parts = nodeName.split('.');
+        const projectName = parts.length > 1 ? parts[0] : "Unknown";
+        const className = parts.length > 1 ? parts[1] : nodeName;
+        
+        return {
+          projectName,
+          className,
+          namespace: "",
+          filePath: "",
+          dependencies: edges.get(nodeName)?.map(dep => {
+            // Again, simplified extraction of class name
+            const depParts = dep.split('.');
+            return {
+              className: depParts.length > 1 ? depParts[1] : dep,
+              namespace: "",
+              projectName: "external"
+            };
+          }) || []
+        };
+      });
+      
+      lastCycleAnalysisResult = detectClassCycles(simClasses);
+    } else {
+      // Create a simulated project structure for project graphs
+      const simProjects = Array.from(nodes)
+        .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
+        .map(projectName => ({
+          name: projectName,
+          path: "",
+          dependencies: edges.get(projectName) || [],
+          packageDependencies: [],
+          targetFramework: ""
+        }));
+      
+      lastCycleAnalysisResult = detectProjectCycles(simProjects);
+    }
+  } catch (error) {
+    console.error("Error analyzing cycles in preview:", error);
+    // Don't show error to user, just set analysis result to null
+    lastCycleAnalysisResult = null;
+  }
 }
 
 function setupAutoPreview(
@@ -595,7 +695,7 @@ function setupAutoPreview(
   const previewedFiles = new Set<string>();
 
   if (openPreviewOnGraphvizFileOpen) {
-    vscode.workspace.onDidOpenTextDocument((document) => {
+    vscode.workspace.onDidOpenTextDocument(async (document) => {
       // Skip if this file has already been previewed
       if (previewedFiles.has(document.fileName)) {
         return;
@@ -609,13 +709,31 @@ function setupAutoPreview(
         // Add to previewed files set
         previewedFiles.add(document.fileName);
         
+        // Store content and title for later use (for cycle analysis)
         const dotContent = document.getText();
         const title = path.basename(document.fileName);
+        lastDotContent = dotContent;
+        lastGraphTitle = title;
+        
+        // Analyze cycles in the graph before showing preview
+        await analyzeCyclesInDotContent(dotContent, document.fileName);
+        
+        // Now show the preview with cycle data
         const sanitizeResult = sanitizeDotContent(dotContent);
+        
+        // Only create cycles-only content if cycles were detected
+        let cyclesOnlyContent = undefined;
+        if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+          const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+          const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+          cyclesOnlyContent = cyclesOnlySanitized.content;
+        }
+        
         graphPreviewProvider.showPreview(
           sanitizeResult.content,
           title,
-          document.fileName
+          document.fileName,
+          cyclesOnlyContent
         );
       }
     });
