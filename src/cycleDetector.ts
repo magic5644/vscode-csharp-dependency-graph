@@ -257,15 +257,26 @@ export function generateDotWithHighlightedCycles(
     // Update the dot content by adding "color" and "penwidth" attributes to cyclic edges
     const lines = modifiedDot.split('\n');
     const modifiedLines = lines.map(line => {
-        // We need to handle different formats of edge definitions
-        for (const cyclicEdge of cyclicEdges) {
-            // Match either "A" -> "B" or A -> B format
-            if (line.includes(`"${cyclicEdge.split(' -> ')[0]}"`) && 
-                line.includes(`"${cyclicEdge.split(' -> ')[1]}"`) &&
-                line.includes('->')) {
-                return line.replace(/];/, ', color="#FF0000", penwidth=2.0, fontcolor="#FF0000", label="cycle"];');
-            }
+        // Skip comment lines and lines without edges
+        if (line.trim().startsWith('//') || !line.includes('->')) {
+            return line;
         }
+        
+        // Use a more precise regex to match edge definitions
+        // This will extract the exact source and target nodes
+        const edgeMatch = line.match(/"([^"]+)"\s*->\s*"([^"]+)"/);
+        if (!edgeMatch) {
+            return line;
+        }
+        
+        const sourceNode = edgeMatch[1];
+        const targetNode = edgeMatch[2];
+        
+        // Check if this exact edge is part of a cycle
+        if (cyclicEdges.has(`${sourceNode} -> ${targetNode}`)) {
+            return line.replace(/\];/, ', color="#FF0000", penwidth=2.0, fontcolor="#FF0000", label="cycle"];');
+        }
+        
         return line;
     });
     

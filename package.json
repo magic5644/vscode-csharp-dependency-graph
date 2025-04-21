@@ -162,6 +162,30 @@
           },
           "group": "navigation"
         }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.analyze-cycles",
+          "group": "7_dependency-graph@1"
+        },
+        {
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.generate-cycle-report",
+          "group": "7_dependency-graph@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.analyze-cycles",
+          "group": "7_dependency-graph@1"
+        },
+        {
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.generate-cycle-report",
+          "group": "7_dependency-graph@2"
+        }
       ]
     }
   },

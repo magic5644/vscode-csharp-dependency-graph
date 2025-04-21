@@ -635,7 +635,7 @@ function registerCycleAnalysisCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-csharp-dependency-graph.analyze-cycles",
-      async () => {
+      async (fileUri?: vscode.Uri) => {
         try {
           const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
           if (!workspaceFolder) {
@@ -643,12 +643,29 @@ function registerCycleAnalysisCommands(
             return;
           }
 
-          // Check if there's an active editor
-          const editor = vscode.window.activeTextEditor;
-          if (!editor || (!editor.document.fileName.endsWith('.dot') && !editor.document.fileName.endsWith('.gv'))) {
-            vscode.window.showErrorMessage("Please open a Graphviz (.dot/.gv) file for analysis");
-            return;
+          let dotFilePath: string;
+          let dotContent: string;
+
+          // Check if command was triggered from the context menu (via explorer)
+          if (fileUri && (fileUri.fsPath.endsWith('.dot') || fileUri.fsPath.endsWith('.gv'))) {
+            // Command triggered from explorer context menu
+            dotFilePath = fileUri.fsPath;
+            dotContent = fs.readFileSync(dotFilePath, 'utf8');
+          } else {
+            // Check if there's an active editor
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || (!editor.document.fileName.endsWith('.dot') && !editor.document.fileName.endsWith('.gv'))) {
+              vscode.window.showErrorMessage("Please open a Graphviz (.dot/.gv) file for analysis");
+              return;
+            }
+            
+            dotFilePath = editor.document.fileName;
+            dotContent = editor.document.getText();
           }
+
+          // Store content and title for later use
+          lastDotContent = dotContent;
+          lastGraphTitle = path.basename(dotFilePath);
 
           // Start progress indicator
           await vscode.window.withProgress({
@@ -656,11 +673,6 @@ function registerCycleAnalysisCommands(
             title: "Analyzing dependency cycles...",
             cancellable: false,
           }, async (progress) => {
-            // Read the current file content
-            const dotContent = editor.document.getText();
-            lastDotContent = dotContent;
-            lastGraphTitle = path.basename(editor.document.fileName);
-
             // Attempt to get the projects or class dependencies by extracting from the DOT content
             // This is a simplified approach - extract node definitions
             const nodeRegex = /"([^"]+)"\s*\[/g;
@@ -755,7 +767,7 @@ function registerCycleAnalysisCommands(
             graphPreviewProvider.showPreview(
               sanitizeResult.content,
               `${lastGraphTitle} (With Cycles)`,
-              editor.document.fileName
+              dotFilePath
             );
           });
           
@@ -786,21 +798,36 @@ function registerCycleAnalysisCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-csharp-dependency-graph.generate-cycle-report",
-      async () => {
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-          vscode.window.showErrorMessage("No workspace folder open");
-          return;
-        }
+      async (fileUri?: vscode.Uri) => {
+        try {
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            vscode.window.showErrorMessage("No workspace folder open");
+            return;
+          }
 
-        if (!lastCycleAnalysisResult) {
-          vscode.window.showErrorMessage(
-            "No cycle analysis results available. Please generate a dependency graph first."
-          );
-          return;
-        }
+          // If we already have analysis results, use them
+          if (!lastCycleAnalysisResult && fileUri) {
+            // Run the analysis command first to get the results
+            await vscode.commands.executeCommand("vscode-csharp-dependency-graph.analyze-cycles", fileUri);
+            
+            // If analysis failed or no cycles were detected
+            if (!lastCycleAnalysisResult) {
+              return;
+            }
+          } else if (!lastCycleAnalysisResult) {
+            vscode.window.showErrorMessage(
+              "No cycle analysis results available. Please analyze a dependency graph first."
+            );
+            return;
+          }
 
-        generateAndShowCycleReport(workspaceFolder);
+          generateAndShowCycleReport(workspaceFolder);
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Error generating cycle report: ${errorMessage}`);
+        }
       }
     )
   );
