@@ -45,6 +45,14 @@
           "light": "resources/icon-light.svg",
           "dark": "resources/icon-dark.svg"
         }
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.analyze-cycles",
+        "title": "C#: Analyze Dependency Cycles"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.generate-cycle-report",
+        "title": "C#: Generate Dependency Cycle Report"
       }
     ],
     "configuration": {
@@ -82,20 +90,33 @@
           "default": "#ffcccc",
           "markdownDescription": "Color for the packages in project dependency graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, lightblue, etc.)"
         },
-        "csharpDependencyGraph.excludeTestProjects": {
+        "csharpDependencyGraph.cyclicDependencyColor": {
           "order": 5,
+          "type": "string",
+          "format": "color",
+          "default": "#FF0000",
+          "markdownDescription": "Color for highlighting cyclic dependencies in the graph.\n\n Colors can be specified in hex format (#RRGGBB) or by name (red, green, blue, etc.)"
+        },
+        "csharpDependencyGraph.excludeTestProjects": {
+          "order": 6,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Exclude test projects from the dependency graph"
         },
         "csharpDependencyGraph.openPreviewOnGraphvizFileOpen": {
-          "order": 6,
+          "order": 7,
           "type": "boolean",
           "default": true,
           "markdownDescription": "(beta) Open automatically the new Graphviz preview on graphviz file"
         },
+        "csharpDependencyGraph.detectCyclicDependencies": {
+          "order": 8,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically detect and highlight cyclic dependencies in generated graphs"
+        },
         "csharpDependencyGraph.testProjectPatterns": {
-          "order": 7,
+          "order": 9,
           "type": "array",
           "default": [
             "*Test*",
@@ -105,7 +126,7 @@
           "markdownDescription": "Glob patterns to identify test projects to exclude"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
-          "order": 8,
+          "order": 10,
           "type": "array",
           "default": [
             "**/obj/**",
