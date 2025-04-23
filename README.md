@@ -155,11 +155,43 @@ classDiagram
       +activate(context: vscode.ExtensionContext)
   }
 
-  class GraphGenerator {
-      +generateDotFile(projects: Project[], options: GraphOptions): string
-      +generateClassDependencyGraph(projects: Project[], classDependencies: ClassDependency[], options: GraphOptions): string
+  %% Strategy Pattern classes
+  class GraphGenerationStrategy {
+      <<interface>>
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
   }
 
+  class BaseGraphStrategy {
+      <<abstract>>
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
+      #generateHeader(): string
+      #generateFooter(): string
+  }
+  
+  class ProjectGraphStrategy {
+      +generate(projects: Project[], options: GraphOptions, _additionalData?: StrategyAdditionalData): string
+      -generateProjectNodes(projects, options): string
+      -generatePackageNodes(projects, options): string
+      -collectUniquePackages(projects): Set~string~
+      -generateProjectEdges(projects): string
+      -generatePackageEdges(projects): string
+  }
+
+  class ClassGraphStrategy {
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
+      -generateProjectSubgraphs(projects, classDependencies, options): string
+      -generateClassDependencyEdges(classDependencies): string
+      -findTargetClass(classDependencies, sourceClass, dependency): ClassDependency
+  }
+
+  class GraphGenerator {
+      -projectGraphStrategy: ProjectGraphStrategy
+      -classGraphStrategy: ClassGraphStrategy
+      +constructor()
+      +generateDotFile(projects: Project[], options: GraphOptions, classDependencies?: ClassDependency[]): string
+  }
+
+  %% Original classes for other functionality
   class CsprojFinder {
       +findCsprojFiles(workspaceFolder: string, excludeTestProjects: boolean, testProjectPatterns: string[], useSolutionFile: boolean): Promise<string[]>
   }
@@ -205,7 +237,17 @@ classDiagram
       +sanitizeStringValue(value: string): string
   }
 
-  Extension --> GraphGenerator
+  %% Strategy Pattern relationships
+  GraphGenerationStrategy <|.. BaseGraphStrategy : implements
+  BaseGraphStrategy <|-- ProjectGraphStrategy : extends
+  BaseGraphStrategy <|-- ClassGraphStrategy : extends
+  GraphGenerator o-- ProjectGraphStrategy : uses
+  GraphGenerator o-- ClassGraphStrategy : uses
+  
+  %% Legacy adapter relationships
+  Extension --> GraphGenerator : uses adapter
+  
+  %% Other relationships
   Extension --> CsprojFinder
   Extension --> CsprojParser
   Extension --> CycleDetector
@@ -216,9 +258,9 @@ classDiagram
   Extension --> VizInitializer
   Extension --> DotSanitizer
   CsprojFinder --> SlnParser
-  GraphPreviewProvider ..> VizInitializer: uses
-  GraphPreviewProvider ..> DotSanitizer: uses
-  Extension ..> DotSanitizer: uses
+  GraphPreviewProvider ..> VizInitializer : uses
+  GraphPreviewProvider ..> DotSanitizer : uses
+  Extension ..> DotSanitizer : uses
 ```
 
 ## Known Issues
