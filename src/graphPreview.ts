@@ -402,7 +402,12 @@ export class GraphPreviewProvider {
             isShowingCyclesOnly = !isShowingCyclesOnly;
             
             // Update button appearance
-            toggleCyclesBtn.textContent = isShowingCyclesOnly ? "Show Full Graph" : "Show Cycles Only";
+            const buttonText = isShowingCyclesOnly ? "Show Full Graph" : "Show Cycles Only";
+            if (toggleCyclesBtn.firstChild) {
+              toggleCyclesBtn.firstChild.textContent = buttonText;
+            } else {
+              toggleCyclesBtn.textContent = buttonText;
+            }
             toggleCyclesBtn.classList.toggle("active", isShowingCyclesOnly);
             
             // Ensure the cycle badge remains in place
