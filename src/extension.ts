@@ -17,8 +17,7 @@ import {
   generateDotWithHighlightedCycles, 
   generateCyclesOnlyGraph, 
   generateCycleReport,
-  CycleAnalysisResult,
-  Cycle 
+  CycleAnalysisResult
 } from './cycleDetector';
 
 interface DependencyGraphConfig {
@@ -37,7 +36,7 @@ interface DependencyGraphConfig {
 
 // Store cycle analysis results for use across commands
 let lastCycleAnalysisResult: CycleAnalysisResult | null = null;
-let lastDotContent: string | null = null;
+let _lastDotContent: string | null = null;
 let lastGraphTitle: string | null = null;
 
 function isPathMatchingPattern(filePath: string, pattern: string): boolean {
@@ -385,7 +384,7 @@ async function generateAndSaveGraph(
 
       // Store results for later use
       lastCycleAnalysisResult = cycleAnalysisResult;
-      lastDotContent = dotContent;
+      _lastDotContent = dotContent;
       lastGraphTitle = path.basename(saveUri.fsPath);
 
       // Write the file
@@ -566,7 +565,7 @@ function registerGraphvizPreviewCommand(
           const title = path.basename(editor.document.fileName);
           
           // Store content and title for later use (for cycle analysis)
-          lastDotContent = dotContent;
+          _lastDotContent = dotContent;
           lastGraphTitle = title;
           
           // Analyze cycles in the graph before showing preview
@@ -712,7 +711,7 @@ function setupAutoPreview(
         // Store content and title for later use (for cycle analysis)
         const dotContent = document.getText();
         const title = path.basename(document.fileName);
-        lastDotContent = dotContent;
+        _lastDotContent = dotContent;
         lastGraphTitle = title;
         
         // Analyze cycles in the graph before showing preview
@@ -782,7 +781,7 @@ function registerCycleAnalysisCommands(
           }
 
           // Store content and title for later use
-          lastDotContent = dotContent;
+          _lastDotContent = dotContent;
           lastGraphTitle = path.basename(dotFilePath);
 
           // Start progress indicator
