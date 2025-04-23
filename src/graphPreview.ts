@@ -743,7 +743,7 @@ export class GraphPreviewProvider {
                 if (cyclesOnlyDotSource) {
                   try {
                     // Search for cycle patterns in DOT content
-                    const cycleMatches = cyclesOnlyDotSource.match(/subgraph cluster_cycle_d+/g) || [];
+                    const cycleMatches = cyclesOnlyDotSource.match(/subgraph cluster_cycle_\\d+/g) || [];
                     if (cycleMatches.length > 0) {
                       cycleCount = cycleMatches.length;
                       isCountReliable = true;

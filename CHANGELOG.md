@@ -1,7 +1,6 @@
 # Changelog
 
-
-## [0.6.9] - 2025-04-dd
+## [0.6.9] - (Coming Soon)
 
 - **Added** Analyze cycles in the dependency graph (beta)
 - **Added** Generate a report of cycles in dependencies
