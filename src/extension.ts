@@ -11,6 +11,14 @@ import { minimatch } from "minimatch";
 import { GraphPreviewProvider } from "./graphPreview";
 import { prepareVizJs } from "./vizInitializer";
 import { sanitizeDotContent } from './dotSanitizer';
+import { 
+  detectProjectCycles, 
+  detectClassCycles, 
+  generateDotWithHighlightedCycles, 
+  generateCyclesOnlyGraph, 
+  generateCycleReport,
+  CycleAnalysisResult
+} from './cycleDetector';
 
 interface DependencyGraphConfig {
   includeNetVersion: boolean;
@@ -20,9 +28,16 @@ interface DependencyGraphConfig {
   useSolutionFile: boolean;
   classDependencyColor: string;
   packageNodeColor: string;
+  cyclicDependencyColor: string;
   excludeSourcePatterns: string[];
   openPreviewOnGraphvizFileOpen: boolean;
+  detectCyclicDependencies: boolean;
 }
+
+// Store cycle analysis results for use across commands
+let lastCycleAnalysisResult: CycleAnalysisResult | null = null;
+let _lastDotContent: string | null = null;
+let lastGraphTitle: string | null = null;
 
 function isPathMatchingPattern(filePath: string, pattern: string): boolean {
   const fileName = path.basename(filePath);
@@ -64,6 +79,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Register preview command
   registerGraphvizPreviewCommand(context, graphPreviewProvider);
+
+  // Register cycle analysis commands
+  registerCycleAnalysisCommands(context, graphPreviewProvider);
 
   // Setup auto-preview for Graphviz files
   setupAutoPreview(graphPreviewProvider);
@@ -174,6 +192,10 @@ function loadConfiguration() {
       "packageDependencyColor",
       "#ffcccc"
     ),
+    cyclicDependencyColor: config.get<string>(
+      "cyclicDependencyColor",
+      "#FF0000"
+    ),
     excludeSourcePatterns: config.get<string[]>(
       "excludeSourcePatterns",
       [
@@ -185,6 +207,10 @@ function loadConfiguration() {
     ),
     openPreviewOnGraphvizFileOpen: config.get<boolean>(
       "openPreviewOnGraphvizFileOpen",
+      true
+    ),
+    detectCyclicDependencies: config.get<boolean>(
+      "detectCyclicDependencies",
       true
     ),
   };
@@ -321,14 +347,17 @@ async function generateAndSaveGraph(
       });
 
       let dotContent: string;
+      let cycleAnalysisResult: CycleAnalysisResult | null = null;
 
       if (generateClassGraph) {
-        dotContent = await generateClassDependencyGraph(
+        const { dotContent: classDotContent, cycleAnalysis } = await generateClassDependencyGraph(
           csprojFiles,
           projects,
           config,
           progress
         );
+        dotContent = classDotContent;
+        cycleAnalysisResult = cycleAnalysis;
       } else {
         // Generate the DOT file with project dependencies only
         progress.report({
@@ -341,7 +370,22 @@ async function generateAndSaveGraph(
           includePackageDependencies: config.includePackageDependencies,
           packageNodeColor: config.packageNodeColor,
         });
+
+        // Detect cycles if enabled
+        if (config.detectCyclicDependencies) {
+          progress.report({ message: "Analyzing dependency cycles..." });
+          cycleAnalysisResult = detectProjectCycles(projects);
+          
+          if (cycleAnalysisResult.cycles.length > 0) {
+            dotContent = generateDotWithHighlightedCycles(dotContent, cycleAnalysisResult.cycles);
+          }
+        }
       }
+
+      // Store results for later use
+      lastCycleAnalysisResult = cycleAnalysisResult;
+      _lastDotContent = dotContent;
+      lastGraphTitle = path.basename(saveUri.fsPath);
 
       // Write the file
       fs.writeFileSync(saveUri.fsPath, dotContent);
@@ -350,12 +394,19 @@ async function generateAndSaveGraph(
     }
   );
 
-  // Show completion message and options
+  // Show completion message and options with additional cycle detection info
+  const actions = ["Open File", "Preview"];
+  
+  if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+    actions.push("View Cycles", "Generate Report");
+  }
+  
   vscode.window
     .showInformationMessage(
-      `Dependency graph saved to ${path.basename(filePath)}`,
-      "Open File",
-      "Preview"
+      `Dependency graph saved to ${path.basename(filePath)}${lastCycleAnalysisResult?.cycles.length ? 
+        ` (${lastCycleAnalysisResult.cycles.length} cycles detected)` : 
+        ''}`,
+      ...actions
     )
     .then((selection) => {
       if (selection === "Open File") {
@@ -372,6 +423,10 @@ async function generateAndSaveGraph(
           title,
           filePath
         );
+      } else if (selection === "View Cycles" && lastCycleAnalysisResult) {
+        showCyclesOnlyGraph(graphPreviewProvider);
+      } else if (selection === "Generate Report" && lastCycleAnalysisResult) {
+        generateAndShowCycleReport(workspaceFolder);
       }
     });
 }
@@ -412,7 +467,7 @@ async function generateClassDependencyGraph(
   projects: Project[],
   config: DependencyGraphConfig,
   progress: vscode.Progress<{ message?: string }>
-): Promise<string> {
+): Promise<{ dotContent: string, cycleAnalysis: CycleAnalysisResult | null }> {
   try {
     // Find C# source files and parse class dependencies
     progress.report({ message: "Finding C# source files..." });
@@ -445,7 +500,8 @@ async function generateClassDependencyGraph(
     progress.report({
       message: `Generating .dot file with ${classDependencies.length} classes...`,
     });
-    return generateDotFile(
+    
+    let dotContent = generateDotFile(
       projects,
       {
         includeNetVersion: config.includeNetVersion,
@@ -456,6 +512,20 @@ async function generateClassDependencyGraph(
       },
       classDependencies
     );
+
+    let cycleAnalysis: CycleAnalysisResult | null = null;
+    
+    // Detect cycles if enabled
+    if (config.detectCyclicDependencies) {
+      progress.report({ message: "Analyzing class dependency cycles..." });
+      cycleAnalysis = detectClassCycles(classDependencies);
+      
+      if (cycleAnalysis.cycles.length > 0) {
+        dotContent = generateDotWithHighlightedCycles(dotContent, cycleAnalysis.cycles);
+      }
+    }
+
+    return { dotContent, cycleAnalysis };
   } catch (error) {
     console.error("Error during class analysis:", error);
     // Fallback to project-level graph if class analysis fails
@@ -463,13 +533,16 @@ async function generateClassDependencyGraph(
       message:
         "Class analysis failed, generating project-level graph instead...",
     });
-    return generateDotFile(projects, {
+    
+    const dotContent = generateDotFile(projects, {
       includeNetVersion: config.includeNetVersion,
       includeClassDependencies: false,
       classDependencyColor: config.classDependencyColor,
       includePackageDependencies: config.includePackageDependencies,
       packageNodeColor: config.packageNodeColor,
     });
+    
+    return { dotContent, cycleAnalysis: null };
   }
 }
 
@@ -480,7 +553,7 @@ function registerGraphvizPreviewCommand(
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-csharp-dependency-graph.previewGraphviz",
-      () => {
+      async () => {
         const editor = vscode.window.activeTextEditor;
         if (
           editor &&
@@ -490,11 +563,30 @@ function registerGraphvizPreviewCommand(
         ) {
           const dotContent = editor.document.getText();
           const title = path.basename(editor.document.fileName);
+          
+          // Store content and title for later use (for cycle analysis)
+          _lastDotContent = dotContent;
+          lastGraphTitle = title;
+          
+          // Analyze cycles in the graph before showing preview
+          await analyzeCyclesInDotContent(dotContent, editor.document.fileName);
+          
+          // Now show the preview with cycle data
           const sanitizeResult = sanitizeDotContent(dotContent);
+          
+          // Only create cycles-only content if cycles were detected
+          let cyclesOnlyContent = undefined;
+          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+            cyclesOnlyContent = cyclesOnlySanitized.content;
+          }
+          
           graphPreviewProvider.showPreview(
             sanitizeResult.content,
             title,
-            editor.document.fileName
+            editor.document.fileName,
+            cyclesOnlyContent
           );
         } else {
           vscode.window.showErrorMessage(
@@ -504,6 +596,87 @@ function registerGraphvizPreviewCommand(
       }
     )
   );
+}
+
+/**
+ * Analyzes the cycles in a DOT content without showing UI feedback
+ */
+async function analyzeCyclesInDotContent(dotContent: string, _filePath: string): Promise<void> {
+  try {
+    // Extract nodes and edges from DOT content
+    const nodeRegex = /"([^"]+)"\s*\[/g;
+    const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/g;
+    
+    const nodes = new Set<string>();
+    const edges = new Map<string, string[]>();
+    
+    let match;
+    while ((match = nodeRegex.exec(dotContent)) !== null) {
+      nodes.add(match[1]);
+    }
+    
+    // Reset lastIndex to start from the beginning
+    edgeRegex.lastIndex = 0;
+    
+    while ((match = edgeRegex.exec(dotContent)) !== null) {
+      const source = match[1];
+      const target = match[2];
+      
+      if (!edges.has(source)) {
+        edges.set(source, []);
+      }
+      
+      edges.get(source)!.push(target);
+    }
+    
+    // Determine if it's a class graph or project graph
+    const isClassGraph = dotContent.includes("cluster_");
+    
+    if (isClassGraph) {
+      // Create a simulated class dependency structure
+      const simClasses = Array.from(nodes).map(nodeName => {
+        // Extract project name and class name (if in format "ProjectName.ClassName")
+        const parts = nodeName.split('.');
+        const projectName = parts.length > 1 ? parts[0] : "Unknown";
+        const className = parts.length > 1 ? parts[1] : nodeName;
+        
+        return {
+          projectName,
+          className,
+          namespace: "",
+          filePath: "",
+          dependencies: edges.get(nodeName)?.map(dep => {
+            // Again, simplified extraction of class name
+            const depParts = dep.split('.');
+            return {
+              className: depParts.length > 1 ? depParts[1] : dep,
+              namespace: "",
+              projectName: "external"
+            };
+          }) || []
+        };
+      });
+      
+      lastCycleAnalysisResult = detectClassCycles(simClasses);
+    } else {
+      // Create a simulated project structure for project graphs
+      const simProjects = Array.from(nodes)
+        .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
+        .map(projectName => ({
+          name: projectName,
+          path: "",
+          dependencies: edges.get(projectName) || [],
+          packageDependencies: [],
+          targetFramework: ""
+        }));
+      
+      lastCycleAnalysisResult = detectProjectCycles(simProjects);
+    }
+  } catch (error) {
+    console.error("Error analyzing cycles in preview:", error);
+    // Don't show error to user, just set analysis result to null
+    lastCycleAnalysisResult = null;
+  }
 }
 
 function setupAutoPreview(
@@ -521,7 +694,7 @@ function setupAutoPreview(
   const previewedFiles = new Set<string>();
 
   if (openPreviewOnGraphvizFileOpen) {
-    vscode.workspace.onDidOpenTextDocument((document) => {
+    vscode.workspace.onDidOpenTextDocument(async (document) => {
       // Skip if this file has already been previewed
       if (previewedFiles.has(document.fileName)) {
         return;
@@ -535,13 +708,31 @@ function setupAutoPreview(
         // Add to previewed files set
         previewedFiles.add(document.fileName);
         
+        // Store content and title for later use (for cycle analysis)
         const dotContent = document.getText();
         const title = path.basename(document.fileName);
+        _lastDotContent = dotContent;
+        lastGraphTitle = title;
+        
+        // Analyze cycles in the graph before showing preview
+        await analyzeCyclesInDotContent(dotContent, document.fileName);
+        
+        // Now show the preview with cycle data
         const sanitizeResult = sanitizeDotContent(dotContent);
+        
+        // Only create cycles-only content if cycles were detected
+        let cyclesOnlyContent = undefined;
+        if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+          const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+          const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+          cyclesOnlyContent = cyclesOnlySanitized.content;
+        }
+        
         graphPreviewProvider.showPreview(
           sanitizeResult.content,
           title,
-          document.fileName
+          document.fileName,
+          cyclesOnlyContent
         );
       }
     });
@@ -551,6 +742,254 @@ function setupAutoPreview(
       previewedFiles.delete(document.fileName);
     });
   }
+}
+
+function registerCycleAnalysisCommands(
+  context: vscode.ExtensionContext,
+  graphPreviewProvider: GraphPreviewProvider
+): void {
+  // Register command to analyze cycles in a dependency graph
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-csharp-dependency-graph.analyze-cycles",
+      async (fileUri?: vscode.Uri) => {
+        try {
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            vscode.window.showErrorMessage("No workspace folder open");
+            return;
+          }
+
+          let dotFilePath: string;
+          let dotContent: string;
+
+          // Check if command was triggered from the context menu (via explorer)
+          if (fileUri && (fileUri.fsPath.endsWith('.dot') || fileUri.fsPath.endsWith('.gv'))) {
+            // Command triggered from explorer context menu
+            dotFilePath = fileUri.fsPath;
+            dotContent = fs.readFileSync(dotFilePath, 'utf8');
+          } else {
+            // Check if there's an active editor
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || (!editor.document.fileName.endsWith('.dot') && !editor.document.fileName.endsWith('.gv'))) {
+              vscode.window.showErrorMessage("Please open a Graphviz (.dot/.gv) file for analysis");
+              return;
+            }
+            
+            dotFilePath = editor.document.fileName;
+            dotContent = editor.document.getText();
+          }
+
+          // Store content and title for later use
+          _lastDotContent = dotContent;
+          lastGraphTitle = path.basename(dotFilePath);
+
+          // Start progress indicator
+          await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Analyzing dependency cycles...",
+            cancellable: false,
+          }, async (progress) => {
+            // Attempt to get the projects or class dependencies by extracting from the DOT content
+            // This is a simplified approach - extract node definitions
+            const nodeRegex = /"([^"]+)"\s*\[/g;
+            const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/g;
+            
+            const nodes = new Set<string>();
+            const edges = new Map<string, string[]>();
+            
+            let match;
+            while ((match = nodeRegex.exec(dotContent)) !== null) {
+              nodes.add(match[1]);
+            }
+            
+            // Reset lastIndex to start from the beginning
+            edgeRegex.lastIndex = 0;
+            
+            while ((match = edgeRegex.exec(dotContent)) !== null) {
+              const source = match[1];
+              const target = match[2];
+              
+              if (!edges.has(source)) {
+                edges.set(source, []);
+              }
+              
+              edges.get(source)!.push(target);
+            }
+            
+            // Convert to Project or ClassDependency structure
+            const isClassGraph = dotContent.includes("cluster_");
+            
+            if (isClassGraph) {
+              // This is a simplified approach for demonstration
+              // In a real implementation, you would parse the DOT to recover the full class structure
+              progress.report({ message: "Reconstructing class dependencies..." });
+              
+              // Create a simulated class dependency structure
+              const simClasses = Array.from(nodes).map(nodeName => {
+                // Extract project name and class name (if in format "ProjectName.ClassName")
+                const parts = nodeName.split('.');
+                const projectName = parts.length > 1 ? parts[0] : "Unknown";
+                const className = parts.length > 1 ? parts[1] : nodeName;
+                
+                return {
+                  projectName,
+                  className,
+                  namespace: "",
+                  filePath: "",
+                  dependencies: edges.get(nodeName)?.map(dep => {
+                    // Again, simplified extraction of class name
+                    const depParts = dep.split('.');
+                    return {
+                      className: depParts.length > 1 ? depParts[1] : dep,
+                      namespace: "",
+                      projectName: "external" // Adding the missing projectName field
+                    };
+                  }) || []
+                };
+              });
+              
+              lastCycleAnalysisResult = detectClassCycles(simClasses);
+            } else {
+              // Create a simulated project structure for project graphs
+              progress.report({ message: "Reconstructing project dependencies..." });
+              
+              const simProjects = Array.from(nodes)
+                .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
+                .map(projectName => ({
+                  name: projectName,
+                  path: "", // Adding the missing path field
+                  dependencies: edges.get(projectName) || [],
+                  packageDependencies: [],
+                  targetFramework: ""
+                }));
+              
+              lastCycleAnalysisResult = detectProjectCycles(simProjects);
+            }
+            
+            if (!lastCycleAnalysisResult || lastCycleAnalysisResult.cycles.length === 0) {
+              vscode.window.showInformationMessage("No dependency cycles detected in the graph");
+              return;
+            }
+            
+            // Add highlighting to cycles
+            progress.report({ message: "Highlighting cycles in graph..." });
+            const highlightedDotContent = generateDotWithHighlightedCycles(
+              dotContent, 
+              lastCycleAnalysisResult.cycles
+            );
+            
+            // Preview the highlighted graph
+            const sanitizeResult = sanitizeDotContent(highlightedDotContent);
+            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+            graphPreviewProvider.showPreview(
+              sanitizeResult.content,
+              `${lastGraphTitle} (With Cycles)`,
+              dotFilePath,
+              cyclesOnlySanitized.content // Pass the cycles-only content
+            );
+          });
+          
+          // Show options based on analysis results
+          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+            vscode.window.showInformationMessage(
+              `${lastCycleAnalysisResult.cycles.length} cycles detected in the dependency graph`,
+              "View Cycles Only", 
+              "Generate Report"
+            ).then(selection => {
+              if (selection === "View Cycles Only") {
+                showCyclesOnlyGraph(graphPreviewProvider);
+              } else if (selection === "Generate Report") {
+                generateAndShowCycleReport(workspaceFolder);
+              }
+            });
+          }
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Error analyzing cycles: ${errorMessage}`);
+        }
+      }
+    )
+  );
+
+  // Register command to generate a cycle report
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-csharp-dependency-graph.generate-cycle-report",
+      async (fileUri?: vscode.Uri) => {
+        try {
+          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+          if (!workspaceFolder) {
+            vscode.window.showErrorMessage("No workspace folder open");
+            return;
+          }
+
+          // If we already have analysis results, use them
+          if (!lastCycleAnalysisResult && fileUri) {
+            // Run the analysis command first to get the results
+            await vscode.commands.executeCommand("vscode-csharp-dependency-graph.analyze-cycles", fileUri);
+            
+            // If analysis failed or no cycles were detected
+            if (!lastCycleAnalysisResult) {
+              return;
+            }
+          } else if (!lastCycleAnalysisResult) {
+            vscode.window.showErrorMessage(
+              "No cycle analysis results available. Please analyze a dependency graph first."
+            );
+            return;
+          }
+
+          generateAndShowCycleReport(workspaceFolder);
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Error generating cycle report: ${errorMessage}`);
+        }
+      }
+    )
+  );
+}
+
+function showCyclesOnlyGraph(graphPreviewProvider: GraphPreviewProvider): void {
+  if (!lastCycleAnalysisResult || !lastGraphTitle) {
+    vscode.window.showErrorMessage("No cycle analysis results available");
+    return;
+  }
+
+  const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+  const sanitizeResult = sanitizeDotContent(cyclesOnlyDot);
+  
+  graphPreviewProvider.showPreview(
+    sanitizeResult.content,
+    `${lastGraphTitle} (Cycles Only)`,
+    undefined,
+    sanitizeResult.content // Pass the same content as cyclesOnlyDotContent
+  );
+}
+
+async function generateAndShowCycleReport(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
+  if (!lastCycleAnalysisResult || !lastGraphTitle) {
+    vscode.window.showErrorMessage("No cycle analysis results available");
+    return;
+  }
+
+  // Generate report content
+  const reportContent = generateCycleReport(lastCycleAnalysisResult);
+  
+  // Create a temporary markdown file to show the report
+  const reportFileName = `${lastGraphTitle.replace('.dot', '')}-cycle-report.md`;
+  const reportPath = path.join(workspaceFolder.uri.fsPath, reportFileName);
+  
+  // Save the report
+  fs.writeFileSync(reportPath, reportContent);
+  
+  // Open the report file
+  vscode.commands.executeCommand("vscode.open", vscode.Uri.file(reportPath));
+  
+  vscode.window.showInformationMessage(`Cycle analysis report saved to ${reportFileName}`);
 }
 
 export function deactivate() {}
