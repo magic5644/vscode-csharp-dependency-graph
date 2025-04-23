@@ -199,7 +199,7 @@ classDiagram
   }
 
   class DotSanitizer {
-      +sanitizeDotContent(dotContent: string): {content: string, invalidGraphWarning: boolean}
+      +sanitizeDotContent(dotContent: string): DotSanitizeResult
       +enhanceGraphWithDefaultAttributes(content: string): string
       +isValidDotGraph(content: string): boolean
       +sanitizeStringValue(value: string): string
