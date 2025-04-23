@@ -750,7 +750,7 @@ export class GraphPreviewProvider {
                       console.log("Found " + cycleCount + " cycles from subgraph patterns (reliable)");
                     } else {
                       // Try another method - search for label="Cycle"
-                      const labelMatches = cyclesOnlyDotSource.match(/label="Cycle d+/g) || [];
+                      const labelMatches = cyclesOnlyDotSource.match(/label="Cycle \\d+/g) || [];
                       if (labelMatches.length > 0) {
                         cycleCount = labelMatches.length;
                         isCountReliable = true;
