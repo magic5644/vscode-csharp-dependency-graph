@@ -258,6 +258,14 @@ classDiagram
       +sanitizeStringValue(value: string): string
   }
 
+  class DotParser {
+      +static extractNodes(dotContent: string): Set~string~
+      +static extractEdges(dotContent: string): Map~string, string[]~
+      +static extractNodesFromEdges(dotContent: string): Set~string~
+      +static isClassDependencyGraph(dotContent: string): boolean
+      +static parse(dotContent: string): object
+  }
+
   %% Strategy Pattern relationships
   GraphGenerationStrategy <|.. BaseGraphStrategy : implements
   BaseGraphStrategy <|-- ProjectGraphStrategy : extends
@@ -278,10 +286,12 @@ classDiagram
   Extension --> GraphPreviewProvider
   Extension --> VizInitializer
   Extension --> DotSanitizer
+  Extension --> DotParser : uses
   CsprojFinder --> SlnParser
   GraphPreviewProvider ..> VizInitializer : uses
   GraphPreviewProvider ..> DotSanitizer : uses
   Extension ..> DotSanitizer : uses
+  CycleDetector ..> DotParser : uses
 
   %% Cycle detection relationships
   CycleDetector ..> CycleUtils : uses

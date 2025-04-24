@@ -11,6 +11,7 @@ import { minimatch } from "minimatch";
 import { GraphPreviewProvider } from "./graphPreview";
 import { prepareVizJs } from "./vizInitializer";
 import { sanitizeDotContent } from './dotSanitizer';
+import { DotParser } from './dotParser';
 import { 
   detectProjectCycles, 
   detectClassCycles, 
@@ -546,6 +547,134 @@ async function generateClassDependencyGraph(
   }
 }
 
+/**
+ * Creates simulated class dependencies from DOT graph nodes and edges
+ */
+function createSimulatedClassDependencies(
+  nodes: Set<string>,
+  edges: Map<string, string[]>
+): { projectName: string; className: string; namespace: string; filePath: string; dependencies: Array<{ className: string; namespace: string; projectName: string }> }[] {
+  return Array.from(nodes).map(nodeName => {
+    // Extract project name and class name (if in format "ProjectName.ClassName")
+    const parts = nodeName.split('.');
+    const projectName = parts.length > 1 ? parts[0] : "Unknown";
+    const className = parts.length > 1 ? parts[1] : nodeName;
+    
+    return {
+      projectName,
+      className,
+      namespace: "",
+      filePath: "",
+      dependencies: edges.get(nodeName)?.map(dep => {
+        // Again, simplified extraction of class name
+        const depParts = dep.split('.');
+        return {
+          className: depParts.length > 1 ? depParts[1] : dep,
+          namespace: "",
+          projectName: "external"
+        };
+      }) || []
+    };
+  });
+}
+
+/**
+ * Creates simulated project dependencies from DOT graph nodes and edges
+ */
+function createSimulatedProjectDependencies(
+  nodes: Set<string>,
+  edges: Map<string, string[]>
+): { name: string; path: string; dependencies: string[]; packageDependencies: never[]; targetFramework: string }[] {
+  return Array.from(nodes)
+    .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
+    .map(projectName => ({
+      name: projectName,
+      path: "",
+      dependencies: edges.get(projectName) || [],
+      packageDependencies: [],
+      targetFramework: ""
+    }));
+}
+
+/**
+ * Creates preview content for cycles in a graph
+ */
+function createCyclePreviewContent(
+  dotContent: string,
+  cycles: Array<{ nodes: string[]; type: 'project' | 'class'; complexity: number }>,
+  title: string,
+  filePath: string
+): {
+  content: string;
+  title: string;
+  filePath: string;
+  cyclesOnlyContent?: string;
+} {
+  const highlightedDotContent = generateDotWithHighlightedCycles(dotContent, cycles);
+  const sanitizeResult = sanitizeDotContent(highlightedDotContent);
+  const cyclesOnlyDot = generateCyclesOnlyGraph(cycles);
+  const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+  
+  return {
+    content: sanitizeResult.content,
+    title: `${title} (With Cycles)`,
+    filePath: filePath,
+    cyclesOnlyContent: cyclesOnlySanitized.content
+  };
+}
+
+/**
+ * Handles analysis of DOT content for cycles
+ */
+async function handleCycleAnalysis(
+  dotContent: string, 
+  dotFilePath: string,
+  progress: vscode.Progress<{ message?: string }>,
+  graphPreviewProvider: GraphPreviewProvider
+): Promise<void> {
+  // Extract nodes and edges from DOT content using the DotParser
+  const { nodes, edges, isClassGraph } = DotParser.parse(dotContent);
+  
+  if (isClassGraph) {
+    // In a real implementation, you would parse the DOT to recover the full class structure
+    progress.report({ message: "Reconstructing class dependencies..." });
+    
+    // Create a simulated class dependency structure
+    const simClasses = createSimulatedClassDependencies(nodes, edges);
+    lastCycleAnalysisResult = detectClassCycles(simClasses);
+  } else {
+    // Create a simulated project structure for project graphs
+    progress.report({ message: "Reconstructing project dependencies..." });
+    
+    const simProjects = createSimulatedProjectDependencies(nodes, edges);
+    lastCycleAnalysisResult = detectProjectCycles(simProjects);
+  }
+  
+  if (!lastCycleAnalysisResult || lastCycleAnalysisResult.cycles.length === 0) {
+    vscode.window.showInformationMessage("No dependency cycles detected in the graph");
+    return;
+  }
+  
+  // Add highlighting to cycles
+  progress.report({ message: "Highlighting cycles in graph..." });
+  
+  // Create preview for the cycles
+  const previewData = createCyclePreviewContent(
+    dotContent,
+    lastCycleAnalysisResult.cycles,
+    lastGraphTitle ?? path.basename(dotFilePath),
+    dotFilePath
+  );
+  
+  // Show the preview
+  graphPreviewProvider.showPreview(
+    previewData.content,
+    previewData.title,
+    previewData.filePath,
+    previewData.cyclesOnlyContent
+  );
+}
+
 function registerGraphvizPreviewCommand(
   context: vscode.ExtensionContext,
   graphPreviewProvider: GraphPreviewProvider
@@ -603,73 +732,16 @@ function registerGraphvizPreviewCommand(
  */
 async function analyzeCyclesInDotContent(dotContent: string, _filePath: string): Promise<void> {
   try {
-    // Extract nodes and edges from DOT content
-    const nodeRegex = /"([^"]+)"\s*\[/g;
-    const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/g;
-    
-    const nodes = new Set<string>();
-    const edges = new Map<string, string[]>();
-    
-    let match;
-    while ((match = nodeRegex.exec(dotContent)) !== null) {
-      nodes.add(match[1]);
-    }
-    
-    // Reset lastIndex to start from the beginning
-    edgeRegex.lastIndex = 0;
-    
-    while ((match = edgeRegex.exec(dotContent)) !== null) {
-      const source = match[1];
-      const target = match[2];
-      
-      if (!edges.has(source)) {
-        edges.set(source, []);
-      }
-      
-      edges.get(source)!.push(target);
-    }
-    
-    // Determine if it's a class graph or project graph
-    const isClassGraph = dotContent.includes("cluster_");
+    // Extract nodes and edges from DOT content using the DotParser
+    const { nodes, edges, isClassGraph } = DotParser.parse(dotContent);
     
     if (isClassGraph) {
       // Create a simulated class dependency structure
-      const simClasses = Array.from(nodes).map(nodeName => {
-        // Extract project name and class name (if in format "ProjectName.ClassName")
-        const parts = nodeName.split('.');
-        const projectName = parts.length > 1 ? parts[0] : "Unknown";
-        const className = parts.length > 1 ? parts[1] : nodeName;
-        
-        return {
-          projectName,
-          className,
-          namespace: "",
-          filePath: "",
-          dependencies: edges.get(nodeName)?.map(dep => {
-            // Again, simplified extraction of class name
-            const depParts = dep.split('.');
-            return {
-              className: depParts.length > 1 ? depParts[1] : dep,
-              namespace: "",
-              projectName: "external"
-            };
-          }) || []
-        };
-      });
-      
+      const simClasses = createSimulatedClassDependencies(nodes, edges);
       lastCycleAnalysisResult = detectClassCycles(simClasses);
     } else {
       // Create a simulated project structure for project graphs
-      const simProjects = Array.from(nodes)
-        .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
-        .map(projectName => ({
-          name: projectName,
-          path: "",
-          dependencies: edges.get(projectName) || [],
-          packageDependencies: [],
-          targetFramework: ""
-        }));
-      
+      const simProjects = createSimulatedProjectDependencies(nodes, edges);
       lastCycleAnalysisResult = detectProjectCycles(simProjects);
     }
   } catch (error) {
@@ -760,24 +832,10 @@ function registerCycleAnalysisCommands(
             return;
           }
 
-          let dotFilePath: string;
-          let dotContent: string;
-
-          // Check if command was triggered from the context menu (via explorer)
-          if (fileUri && (fileUri.fsPath.endsWith('.dot') || fileUri.fsPath.endsWith('.gv'))) {
-            // Command triggered from explorer context menu
-            dotFilePath = fileUri.fsPath;
-            dotContent = fs.readFileSync(dotFilePath, 'utf8');
-          } else {
-            // Check if there's an active editor
-            const editor = vscode.window.activeTextEditor;
-            if (!editor || (!editor.document.fileName.endsWith('.dot') && !editor.document.fileName.endsWith('.gv'))) {
-              vscode.window.showErrorMessage("Please open a Graphviz (.dot/.gv) file for analysis");
-              return;
-            }
-            
-            dotFilePath = editor.document.fileName;
-            dotContent = editor.document.getText();
+          // Get the dot file content and path
+          const { dotFilePath, dotContent } = await getDotFileContent(fileUri);
+          if (!dotFilePath || !dotContent) {
+            return; // Error already shown to user
           }
 
           // Store content and title for later use
@@ -790,105 +848,7 @@ function registerCycleAnalysisCommands(
             title: "Analyzing dependency cycles...",
             cancellable: false,
           }, async (progress) => {
-            // Attempt to get the projects or class dependencies by extracting from the DOT content
-            // This is a simplified approach - extract node definitions
-            const nodeRegex = /"([^"]+)"\s*\[/g;
-            const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/g;
-            
-            const nodes = new Set<string>();
-            const edges = new Map<string, string[]>();
-            
-            let match;
-            while ((match = nodeRegex.exec(dotContent)) !== null) {
-              nodes.add(match[1]);
-            }
-            
-            // Reset lastIndex to start from the beginning
-            edgeRegex.lastIndex = 0;
-            
-            while ((match = edgeRegex.exec(dotContent)) !== null) {
-              const source = match[1];
-              const target = match[2];
-              
-              if (!edges.has(source)) {
-                edges.set(source, []);
-              }
-              
-              edges.get(source)!.push(target);
-            }
-            
-            // Convert to Project or ClassDependency structure
-            const isClassGraph = dotContent.includes("cluster_");
-            
-            if (isClassGraph) {
-              // This is a simplified approach for demonstration
-              // In a real implementation, you would parse the DOT to recover the full class structure
-              progress.report({ message: "Reconstructing class dependencies..." });
-              
-              // Create a simulated class dependency structure
-              const simClasses = Array.from(nodes).map(nodeName => {
-                // Extract project name and class name (if in format "ProjectName.ClassName")
-                const parts = nodeName.split('.');
-                const projectName = parts.length > 1 ? parts[0] : "Unknown";
-                const className = parts.length > 1 ? parts[1] : nodeName;
-                
-                return {
-                  projectName,
-                  className,
-                  namespace: "",
-                  filePath: "",
-                  dependencies: edges.get(nodeName)?.map(dep => {
-                    // Again, simplified extraction of class name
-                    const depParts = dep.split('.');
-                    return {
-                      className: depParts.length > 1 ? depParts[1] : dep,
-                      namespace: "",
-                      projectName: "external" // Adding the missing projectName field
-                    };
-                  }) || []
-                };
-              });
-              
-              lastCycleAnalysisResult = detectClassCycles(simClasses);
-            } else {
-              // Create a simulated project structure for project graphs
-              progress.report({ message: "Reconstructing project dependencies..." });
-              
-              const simProjects = Array.from(nodes)
-                .filter(node => !node.includes('~')) // Filter out package nodes which often contain ~ in DOT
-                .map(projectName => ({
-                  name: projectName,
-                  path: "", // Adding the missing path field
-                  dependencies: edges.get(projectName) || [],
-                  packageDependencies: [],
-                  targetFramework: ""
-                }));
-              
-              lastCycleAnalysisResult = detectProjectCycles(simProjects);
-            }
-            
-            if (!lastCycleAnalysisResult || lastCycleAnalysisResult.cycles.length === 0) {
-              vscode.window.showInformationMessage("No dependency cycles detected in the graph");
-              return;
-            }
-            
-            // Add highlighting to cycles
-            progress.report({ message: "Highlighting cycles in graph..." });
-            const highlightedDotContent = generateDotWithHighlightedCycles(
-              dotContent, 
-              lastCycleAnalysisResult.cycles
-            );
-            
-            // Preview the highlighted graph
-            const sanitizeResult = sanitizeDotContent(highlightedDotContent);
-            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
-            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
-            graphPreviewProvider.showPreview(
-              sanitizeResult.content,
-              `${lastGraphTitle} (With Cycles)`,
-              dotFilePath,
-              cyclesOnlySanitized.content // Pass the cycles-only content
-            );
+            await handleCycleAnalysis(dotContent, dotFilePath, progress, graphPreviewProvider);
           });
           
           // Show options based on analysis results
@@ -953,6 +913,33 @@ function registerCycleAnalysisCommands(
   );
 }
 
+/**
+ * Gets the DOT file content either from a provided URI or the active editor
+ */
+async function getDotFileContent(fileUri?: vscode.Uri): Promise<{ dotFilePath?: string; dotContent?: string }> {
+  let dotFilePath: string;
+  let dotContent: string;
+
+  // Check if command was triggered from the context menu (via explorer)
+  if (fileUri && (fileUri.fsPath.endsWith('.dot') || fileUri.fsPath.endsWith('.gv'))) {
+    // Command triggered from explorer context menu
+    dotFilePath = fileUri.fsPath;
+    dotContent = fs.readFileSync(dotFilePath, 'utf8');
+    return { dotFilePath, dotContent };
+  } 
+  
+  // Check if there's an active editor
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || (!editor.document.fileName.endsWith('.dot') && !editor.document.fileName.endsWith('.gv'))) {
+    vscode.window.showErrorMessage("Please open a Graphviz (.dot/.gv) file for analysis");
+    return {};
+  }
+  
+  dotFilePath = editor.document.fileName;
+  dotContent = editor.document.getText();
+  return { dotFilePath, dotContent };
+}
+
 function showCyclesOnlyGraph(graphPreviewProvider: GraphPreviewProvider): void {
   if (!lastCycleAnalysisResult || !lastGraphTitle) {
     vscode.window.showErrorMessage("No cycle analysis results available");
@@ -966,7 +953,7 @@ function showCyclesOnlyGraph(graphPreviewProvider: GraphPreviewProvider): void {
     sanitizeResult.content,
     `${lastGraphTitle} (Cycles Only)`,
     undefined,
-    sanitizeResult.content // Pass the same content as cyclesOnlyDotContent
+    sanitizeResult.content 
   );
 }
 
@@ -992,4 +979,11 @@ async function generateAndShowCycleReport(workspaceFolder: vscode.WorkspaceFolde
   vscode.window.showInformationMessage(`Cycle analysis report saved to ${reportFileName}`);
 }
 
-export function deactivate() {}
+/**
+ * Cleanup function called when the extension is deactivated
+ * This function is required by the VS Code extension API
+ */
+export function deactivate(): void {
+  // Perform any cleanup if needed when extension is deactivated
+  console.log('C# Dependency Graph extension deactivated');
+}
