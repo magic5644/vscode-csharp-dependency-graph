@@ -155,11 +155,43 @@ classDiagram
       +activate(context: vscode.ExtensionContext)
   }
 
-  class GraphGenerator {
-      +generateDotFile(projects: Project[], options: GraphOptions): string
-      +generateClassDependencyGraph(projects: Project[], classDependencies: ClassDependency[], options: GraphOptions): string
+  %% Strategy Pattern classes
+  class GraphGenerationStrategy {
+      <<interface>>
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
   }
 
+  class BaseGraphStrategy {
+      <<abstract>>
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
+      #generateHeader(): string
+      #generateFooter(): string
+  }
+  
+  class ProjectGraphStrategy {
+      +generate(projects: Project[], options: GraphOptions, _additionalData?: StrategyAdditionalData): string
+      -generateProjectNodes(projects, options): string
+      -generatePackageNodes(projects, options): string
+      -collectUniquePackages(projects): Set~string~
+      -generateProjectEdges(projects): string
+      -generatePackageEdges(projects): string
+  }
+
+  class ClassGraphStrategy {
+      +generate(projects: Project[], options: GraphOptions, additionalData?: StrategyAdditionalData): string
+      -generateProjectSubgraphs(projects, classDependencies, options): string
+      -generateClassDependencyEdges(classDependencies): string
+      -findTargetClass(classDependencies, sourceClass, dependency): ClassDependency
+  }
+
+  class GraphGenerator {
+      -projectGraphStrategy: ProjectGraphStrategy
+      -classGraphStrategy: ClassGraphStrategy
+      +constructor()
+      +generateDotFile(projects: Project[], options: GraphOptions, classDependencies?: ClassDependency[]): string
+  }
+
+  %% Original classes for other functionality
   class CsprojFinder {
       +findCsprojFiles(workspaceFolder: string, excludeTestProjects: boolean, testProjectPatterns: string[], useSolutionFile: boolean): Promise<string[]>
   }
@@ -190,12 +222,33 @@ classDiagram
       +prepareVizJs(extensionUri: vscode.Uri): Promise<boolean>
   }
 
+  class CycleUtils {
+      -static readonly cycleCache: Map~string, string[][]~
+      -static generateCacheKey(graph: Map~string, string[]~): string
+      +static getCachedCycles(graph: Map~string, string[]~): string[][] | undefined
+      +static storeCycles(graph: Map~string, string[]~, cycles: string[][]): void
+      +static removeDuplicateCycles(cycles: string[][]): string[][]
+      +static isCycleAlreadyDetected(cycle: string[], existingCycles: string[][]): boolean
+      -static normalizeCycle(cycle: string[]): string[]
+  }
+
   class CycleDetector {
       +detectProjectCycles(projects: Project[]): CycleAnalysisResult
       +detectClassCycles(classes: ClassDependency[]): CycleAnalysisResult
       +generateDotWithHighlightedCycles(dotContent: string, cycles: Cycle[]): string
       +generateCyclesOnlyGraph(cycles: Cycle[]): string
       +generateCycleReport(cycles: Cycle[]): string
+  }
+
+  %% Cycle detection helper functions
+  class CycleDetectionHelpers {
+      <<utility>>
+      +findAllCycles(graph: Map~string, string[]~): string[][]
+      +findCyclesFromNode(startNode: string, graph: Map~string, string[]~, visited: Set~string~, cycles: string[][]): void
+      +handleBacktracking(stack: Array~object~): void
+      +handleCycleDetection(path: string[], cycleEndNode: string, cycles: string[][]): void
+      +exploreNeighbor(neighbor: string, graph: Map~string, string[]~, stack: Array~object~): void
+      +analyzeHotspotsAndBreakpoints(cycles: Cycle[]): object
   }
 
   class DotSanitizer {
@@ -205,7 +258,25 @@ classDiagram
       +sanitizeStringValue(value: string): string
   }
 
-  Extension --> GraphGenerator
+  class DotParser {
+      +static extractNodes(dotContent: string): Set~string~
+      +static extractEdges(dotContent: string): Map~string, string[]~
+      +static extractNodesFromEdges(dotContent: string): Set~string~
+      +static isClassDependencyGraph(dotContent: string): boolean
+      +static parse(dotContent: string): object
+  }
+
+  %% Strategy Pattern relationships
+  GraphGenerationStrategy <|.. BaseGraphStrategy : implements
+  BaseGraphStrategy <|-- ProjectGraphStrategy : extends
+  BaseGraphStrategy <|-- ClassGraphStrategy : extends
+  GraphGenerator o-- ProjectGraphStrategy : uses
+  GraphGenerator o-- ClassGraphStrategy : uses
+  
+  %% Legacy adapter relationships
+  Extension --> GraphGenerator : uses adapter
+  
+  %% Other relationships
   Extension --> CsprojFinder
   Extension --> CsprojParser
   Extension --> CycleDetector
@@ -215,10 +286,17 @@ classDiagram
   Extension --> GraphPreviewProvider
   Extension --> VizInitializer
   Extension --> DotSanitizer
+  Extension --> DotParser : uses
   CsprojFinder --> SlnParser
-  GraphPreviewProvider ..> VizInitializer: uses
-  GraphPreviewProvider ..> DotSanitizer: uses
-  Extension ..> DotSanitizer: uses
+  GraphPreviewProvider ..> VizInitializer : uses
+  GraphPreviewProvider ..> DotSanitizer : uses
+  Extension ..> DotSanitizer : uses
+  CycleDetector ..> DotParser : uses
+
+  %% Cycle detection relationships
+  CycleDetector ..> CycleUtils : uses
+  CycleDetector ..> CycleDetectionHelpers : uses
+  CycleDetectionHelpers ..> CycleUtils : uses
 ```
 
 ## Known Issues

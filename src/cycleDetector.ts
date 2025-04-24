@@ -15,6 +15,109 @@ export interface CycleAnalysisResult {
 }
 
 /**
+ * Utility class for cycle-related operations
+ */
+class CycleUtils {
+    /**
+     * Cache for memoizing cycle detection results
+     */
+    private static readonly cycleCache = new Map<string, string[][]>();
+
+    /**
+     * Generates a cache key for a graph
+     */
+    private static generateCacheKey(graph: Map<string, string[]>): string {
+        const entries = Array.from(graph.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+        return JSON.stringify(entries);
+    }
+
+    /**
+     * Gets cached cycles for a graph if available
+     */
+    public static getCachedCycles(graph: Map<string, string[]>): string[][] | undefined {
+        const cacheKey = CycleUtils.generateCacheKey(graph);
+        return CycleUtils.cycleCache.get(cacheKey);
+    }
+
+    /**
+     * Stores cycles in cache for a graph
+     */
+    public static storeCycles(graph: Map<string, string[]>, cycles: string[][]): void {
+        const cacheKey = CycleUtils.generateCacheKey(graph);
+        CycleUtils.cycleCache.set(cacheKey, cycles);
+    }
+
+    /**
+     * Removes duplicate cycles (cycles that are rotations of each other)
+     */
+    public static removeDuplicateCycles(cycles: string[][]): string[][] {
+        const normalizedCycles = new Map<string, string[]>();
+        
+        for (const cycle of cycles) {
+            // Sort the cycle to create a canonical form
+            const sorted = [...cycle].sort((a, b) => a.localeCompare(b));
+            const key = sorted.join('->');
+            
+            // Only keep the shortest cycle for each set of nodes
+            if (!normalizedCycles.has(key) || normalizedCycles.get(key)!.length > cycle.length) {
+                normalizedCycles.set(key, cycle);
+            }
+        }
+        
+        return Array.from(normalizedCycles.values());
+    }
+
+    /**
+     * Checks if a cycle is already in the list (accounting for rotations)
+     */
+    public static isCycleAlreadyDetected(cycle: string[], existingCycles: string[][]): boolean {
+        if (cycle.length === 0) {
+            return true;
+        }
+        
+        const normalizedCycle = CycleUtils.normalizeCycle(cycle);
+        const cycleStr = normalizedCycle.join('->');
+        
+        // Check against existing cycles
+        for (const existingCycle of existingCycles) {
+            if (existingCycle.length !== cycle.length) {
+                continue;
+            }
+            
+            const normalizedExisting = CycleUtils.normalizeCycle(existingCycle);
+            const existingCycleStr = normalizedExisting.join('->');
+            
+            if (cycleStr === existingCycleStr) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Normalizes a cycle to start with its lexicographically smallest node
+     */
+    private static normalizeCycle(cycle: string[]): string[] {
+        // Canonical form: Start with the lexicographically smallest node
+        let minNodeIndex = 0;
+        for (let i = 1; i < cycle.length; i++) {
+            if (cycle[i].localeCompare(cycle[minNodeIndex]) < 0) {
+                minNodeIndex = i;
+            }
+        }
+        
+        // Create a normalized representation of the cycle
+        const normalized = [];
+        for (let i = 0; i < cycle.length; i++) {
+            normalized.push(cycle[(minNodeIndex + i) % cycle.length]);
+        }
+        
+        return normalized;
+    }
+}
+
+/**
  * Detects cycles in project dependencies
  */
 export function detectProjectCycles(projects: Project[]): CycleAnalysisResult {
@@ -26,7 +129,7 @@ export function detectProjectCycles(projects: Project[]): CycleAnalysisResult {
         graph.set(project.name, [...project.dependencies]);
     }
     
-    // Detect cycles using DFS
+    // Detect cycles using iterative DFS
     const cycles = findAllCycles(graph);
     
     // Map cycles to the expected format
@@ -74,7 +177,7 @@ export function detectClassCycles(classDependencies: ClassDependency[]): CycleAn
         graph.set(sourceNodeId, targets);
     }
     
-    // Detect cycles using DFS
+    // Detect cycles using iterative DFS
     const cycles = findAllCycles(graph);
     
     // Map cycles to the expected format
@@ -95,84 +198,159 @@ export function detectClassCycles(classDependencies: ClassDependency[]): CycleAn
 }
 
 /**
- * Finds all cycles in a directed graph using a depth-first search approach
+ * Finds all cycles in a directed graph using a non-recursive iterative DFS approach with memoization
  */
 function findAllCycles(graph: Map<string, string[]>): string[][] {
-    const cycles: string[][] = [];
-    const visited = new Set<string>();
-    const stack = new Set<string>();
-    
-    // For each node, start a DFS
-    for (const node of graph.keys()) {
-        findCyclesFromNode(node, node, [], visited, stack, cycles, graph);
-        visited.add(node);
+    // Use memoization to avoid recomputing cycles
+    const cachedResult = CycleUtils.getCachedCycles(graph);
+    if (cachedResult) {
+        return cachedResult;
     }
     
-    // Remove duplicate cycles (cycles that are rotations of each other)
-    return removeDuplicateCycles(cycles);
+    const cycles: string[][] = [];
+    const visited = new Set<string>();
+    
+    // For each node, start a DFS
+    for (const startNode of graph.keys()) {
+        if (visited.has(startNode)) {
+            continue;
+        }
+        
+        findCyclesFromNode(startNode, graph, visited, cycles);
+    }
+    
+    const result = CycleUtils.removeDuplicateCycles(cycles);
+    
+    // Store in cache for future use
+    CycleUtils.storeCycles(graph, result);
+    
+    return result;
 }
 
 /**
- * Recursive DFS function to find cycles from a specific node
+ * Find cycles starting from a specific node using an iterative DFS approach
  */
 function findCyclesFromNode(
     startNode: string,
-    currentNode: string,
-    path: string[],
+    graph: Map<string, string[]>,
     visited: Set<string>,
-    stack: Set<string>,
-    cycles: string[][],
-    graph: Map<string, string[]>
+    cycles: string[][]
 ): void {
-    // If we've already fully explored this node, skip it
-    if (visited.has(currentNode)) {
-        return;
-    }
+    // Use an iterative DFS to prevent stack overflow
+    const stack: Array<{
+        node: string;
+        neighbors: string[];
+        index: number;
+        path: string[];
+        inPath: Set<string>;
+    }> = [];
     
-    // If this node is already in our current path, we found a cycle
-    if (stack.has(currentNode)) {
-        // Get the cycle path
-        const cycleStartIndex = path.indexOf(currentNode);
-        const cycle = path.slice(cycleStartIndex);
-        cycle.push(currentNode); // Complete the cycle
+    const neighbors = graph.get(startNode) || [];
+    stack.push({
+        node: startNode,
+        neighbors,
+        index: 0,
+        path: [startNode],
+        inPath: new Set([startNode])
+    });
+    
+    while (stack.length > 0) {
+        const current = stack[stack.length - 1];
         
-        // Add to our list of cycles if it's not a duplicate
-        cycles.push(cycle);
-        return;
+        if (current.index >= current.neighbors.length) {
+            // Handle backtracking
+            handleBacktracking(stack);
+            continue;
+        }
+        
+        const neighbor = current.neighbors[current.index++];
+        
+        // If the neighbor is in our current path, we found a cycle
+        if (current.inPath.has(neighbor)) {
+            handleCycleDetection(current.path, neighbor, cycles);
+            continue;
+        }
+        
+        // If we've already fully explored this node, skip it
+        if (visited.has(neighbor)) {
+            continue;
+        }
+        
+        // Add the neighbor to our path and explore it
+        exploreNeighbor(neighbor, graph, stack);
     }
     
-    // Add the current node to our path
-    path.push(currentNode);
-    stack.add(currentNode);
-    
-    // Explore all neighbors
-    const neighbors = graph.get(currentNode) || [];
-    for (const neighbor of neighbors) {
-        findCyclesFromNode(startNode, neighbor, [...path], visited, stack, cycles, graph);
-    }
-    
-    // Remove the current node from the stack
-    stack.delete(currentNode);
+    visited.add(startNode);
 }
 
 /**
- * Removes duplicate cycles (cycles that are rotations of each other)
+ * Handle backtracking during DFS
  */
-function removeDuplicateCycles(cycles: string[][]): string[][] {
-    const normalizedCycles = new Map<string, string[]>();
+function handleBacktracking(stack: Array<{
+    node: string;
+    neighbors: string[];
+    index: number;
+    path: string[];
+    inPath: Set<string>;
+}>): void {
+    const current = stack.pop();
+    if (!current) return;
     
-    for (const cycle of cycles) {
-        // Sort the cycle to create a canonical form
-        const sorted = [...cycle].sort();
-        const key = sorted.join('->');
-        
-        // Only keep the shortest cycle for each set of nodes
-        if (!normalizedCycles.has(key) || normalizedCycles.get(key)!.length > cycle.length) {
-            normalizedCycles.set(key, cycle);
+    if (stack.length > 0) {
+        // Remove the current node from the path in the parent frame
+        const path = stack[stack.length - 1].path;
+        const inPath = stack[stack.length - 1].inPath;
+        if (path[path.length - 1] === current.node) {
+            path.pop();
+            inPath.delete(current.node);
         }
     }
+}
+
+/**
+ * Handle cycle detection
+ */
+function handleCycleDetection(
+    path: string[],
+    cycleEndNode: string,
+    cycles: string[][]
+): void {
+    const cycleStartIndex = path.indexOf(cycleEndNode);
+    const cycle = [...path.slice(cycleStartIndex), cycleEndNode];
     
-    return Array.from(normalizedCycles.values());
+    // Check if we already detected this cycle (or a rotation of it)
+    if (!CycleUtils.isCycleAlreadyDetected(cycle, cycles)) {
+        cycles.push(cycle);
+    }
+}
+
+/**
+ * Explore a neighbor node during DFS
+ */
+function exploreNeighbor(
+    neighbor: string,
+    graph: Map<string, string[]>,
+    stack: Array<{
+        node: string;
+        neighbors: string[];
+        index: number;
+        path: string[];
+        inPath: Set<string>;
+    }>
+): void {
+    const current = stack[stack.length - 1];
+    const neighborNeighbors = graph.get(neighbor) || [];
+    const newPath = [...current.path, neighbor];
+    const newInPath = new Set(current.inPath);
+    newInPath.add(neighbor);
+    
+    stack.push({
+        node: neighbor,
+        neighbors: neighborNeighbors,
+        index: 0,
+        path: newPath,
+        inPath: newInPath
+    });
 }
 
 /**
@@ -187,7 +365,7 @@ function analyzeHotspotsAndBreakpoints(cycles: Cycle[]): {
     
     for (const cycle of cycles) {
         for (const node of cycle.nodes) {
-            nodeCounts.set(node, (nodeCounts.get(node) || 0) + 1);
+            nodeCounts.set(node, (nodeCounts.get(node) ?? 0) + 1);
         }
     }
     
@@ -264,7 +442,8 @@ export function generateDotWithHighlightedCycles(
         
         // Use a more precise regex to match edge definitions
         // This will extract the exact source and target nodes
-        const edgeMatch = line.match(/"([^"]+)"\s*->\s*"([^"]+)"/);
+        const edgeRegex = /"([^"]+)"\s*->\s*"([^"]+)"/;
+        const edgeMatch = edgeRegex.exec(line);
         if (!edgeMatch) {
             return line;
         }
