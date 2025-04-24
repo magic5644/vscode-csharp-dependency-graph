@@ -222,12 +222,33 @@ classDiagram
       +prepareVizJs(extensionUri: vscode.Uri): Promise<boolean>
   }
 
+  class CycleUtils {
+      -static readonly cycleCache: Map~string, string[][]~
+      -static generateCacheKey(graph: Map~string, string[]~): string
+      +static getCachedCycles(graph: Map~string, string[]~): string[][] | undefined
+      +static storeCycles(graph: Map~string, string[]~, cycles: string[][]): void
+      +static removeDuplicateCycles(cycles: string[][]): string[][]
+      +static isCycleAlreadyDetected(cycle: string[], existingCycles: string[][]): boolean
+      -static normalizeCycle(cycle: string[]): string[]
+  }
+
   class CycleDetector {
       +detectProjectCycles(projects: Project[]): CycleAnalysisResult
       +detectClassCycles(classes: ClassDependency[]): CycleAnalysisResult
       +generateDotWithHighlightedCycles(dotContent: string, cycles: Cycle[]): string
       +generateCyclesOnlyGraph(cycles: Cycle[]): string
       +generateCycleReport(cycles: Cycle[]): string
+  }
+
+  %% Cycle detection helper functions
+  class CycleDetectionHelpers {
+      <<utility>>
+      +findAllCycles(graph: Map~string, string[]~): string[][]
+      +findCyclesFromNode(startNode: string, graph: Map~string, string[]~, visited: Set~string~, cycles: string[][]): void
+      +handleBacktracking(stack: Array~object~): void
+      +handleCycleDetection(path: string[], cycleEndNode: string, cycles: string[][]): void
+      +exploreNeighbor(neighbor: string, graph: Map~string, string[]~, stack: Array~object~): void
+      +analyzeHotspotsAndBreakpoints(cycles: Cycle[]): object
   }
 
   class DotSanitizer {
@@ -261,6 +282,11 @@ classDiagram
   GraphPreviewProvider ..> VizInitializer : uses
   GraphPreviewProvider ..> DotSanitizer : uses
   Extension ..> DotSanitizer : uses
+
+  %% Cycle detection relationships
+  CycleDetector ..> CycleUtils : uses
+  CycleDetector ..> CycleDetectionHelpers : uses
+  CycleDetectionHelpers ..> CycleUtils : uses
 ```
 
 ## Known Issues
