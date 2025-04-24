@@ -92,8 +92,8 @@ suite('Optimized Cycle Detector Test Suite', () => {
     assert.strictEqual(result2.cycles.length, 1, 'Should detect one cycle');
     
     // Compare the normalized cycles (sort nodes alphabetically)
-    const sortedNodes1 = [...result1.cycles[0].nodes].sort();
-    const sortedNodes2 = [...result2.cycles[0].nodes].sort();
+    const sortedNodes1 = [...result1.cycles[0].nodes].sort((a, b) => a.localeCompare(b));
+    const sortedNodes2 = [...result2.cycles[0].nodes].sort((a, b) => a.localeCompare(b));
     assert.deepStrictEqual(sortedNodes1, sortedNodes2, 'Detected cycles should be the same after normalization');
   });
 });

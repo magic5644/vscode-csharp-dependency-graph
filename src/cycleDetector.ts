@@ -102,7 +102,7 @@ class CycleUtils {
         // Canonical form: Start with the lexicographically smallest node
         let minNodeIndex = 0;
         for (let i = 1; i < cycle.length; i++) {
-            if (cycle[i] < cycle[minNodeIndex]) {
+            if (cycle[i].localeCompare(cycle[minNodeIndex]) < 0) {
                 minNodeIndex = i;
             }
         }
