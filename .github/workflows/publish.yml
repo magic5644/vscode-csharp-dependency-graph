@@ -26,6 +26,10 @@ jobs:
     - name: Install Dependencies
       run: npm ci
       
+    # Install vsce before packaging
+    - name: Install VS Code Extension Manager
+      run: npm install -g @vscode/vsce
+      
     # Webpack now handles resource copying, so this step is no longer necessary
     # but we keep it as a fallback in case webpack encounters issues
     - name: Ensure JS Resources Directory Exists
@@ -45,7 +49,6 @@ jobs:
       
     - name: Verify VSIX Content
       run: |
-        npm install -g @vscode/vsce
         echo "Checking VSIX content structure:"
         vsce ls --tree vscode-csharp-dependency-graph-*.vsix
         
@@ -82,6 +85,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
         
+      # Install vsce for publishing
+      - name: Install VS Code Extension Manager
+        run: npm install -g @vscode/vsce
+        
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
@@ -91,7 +98,6 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
-          npm install -g @vscode/vsce
           vsce publish -p $VSCE_PAT --packagePath vscode-csharp-dependency-graph-${{ steps.get_version.outputs.VERSION }}.vsix
 
       - name: Publish artifact to GitHub Release

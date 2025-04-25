@@ -20,6 +20,10 @@ jobs:
     - name: Install Dependencies
       run: npm ci
       
+    # Install vsce before packaging
+    - name: Install VS Code Extension Manager
+      run: npm install -g @vscode/vsce
+      
     # Webpack now handles resource copying, so this step is no longer necessary
     # but we keep it as a fallback in case webpack encounters issues
     - name: Ensure JS Resources Directory Exists
@@ -39,6 +43,5 @@ jobs:
       
     - name: Verify VSIX Content
       run: |
-        npm install -g @vscode/vsce
         echo "Checking VSIX content structure:"
         vsce ls --tree vscode-csharp-dependency-graph-*.vsix
