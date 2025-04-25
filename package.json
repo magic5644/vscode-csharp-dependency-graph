@@ -2,7 +2,7 @@
   "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph Generator",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "publisher": "magic5644",
   "author": {
     "name": "Gildas Le Bournault"
@@ -25,7 +25,7 @@
     "onLanguage:dot"
   ],
   "main": "./dist/extension.js",
-  "icon": "resources/icon.png",
+  "icon": "dist/resources/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -42,8 +42,8 @@
         "command": "vscode-csharp-dependency-graph.previewGraphviz",
         "title": "Preview Graphviz",
         "icon": {
-          "light": "resources/icon-light.svg",
-          "dark": "resources/icon-dark.svg"
+          "light": "dist/resources/icon-light.svg",
+          "dark": "dist/resources/icon-dark.svg"
         }
       },
       {
@@ -157,8 +157,8 @@
           "when": "editorLangId == dot",
           "command": "vscode-csharp-dependency-graph.previewGraphviz",
           "icon": {
-            "light": "resources/icon-light.svg",
-            "dark": "resources/icon-dark.svg"
+            "light": "dist/resources/icon-light.svg",
+            "dark": "dist/resources/icon-dark.svg"
           },
           "group": "navigation"
         }
@@ -193,13 +193,18 @@
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
+    "clean": "rimraf out dist",
+    "build": "npm run clean && npm run compile",
     "package": "webpack --mode production --devtool hidden-source-map",
+    "package:vsix": "npm run clean && npm run package && vsce package",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run test-compile && npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "pretest": "npm run clean && tsc -p . --outDir out",
+    "lint": "eslint src --ext ts,js",
     "test": "node ./out/test/runTest.js",
     "lint-and-test": "npm run lint && npm run test",
-    "test-compile": "tsc -p . --outDir out"
+    "test-compile": "tsc -p . --outDir out",
+    "build:dev": "tsc -p . --outDir out",
+    "build:prod": "webpack --mode production --devtool hidden-source-map"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
@@ -212,6 +217,7 @@
     "@typescript-eslint/parser": "^6.21.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2",
+    "copy-webpack-plugin": "^13.0.0",
     "eslint": "^8.57.1",
     "glob": "^10.4.5",
     "mocha": "^10.8.2",
