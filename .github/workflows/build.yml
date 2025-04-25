@@ -2,7 +2,6 @@ name: Build
 
 on: [push, pull_request]
 
-
 jobs:
   build:
     permissions:
@@ -16,17 +15,30 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18.x'
+        cache: 'npm'
+        
     - name: Install Dependencies
-      run: npm install
-    - name: Copy JS Resources
-      run: |
-        mkdir -p resources/js
-        cp node_modules/@hpcc-js/wasm/dist/graphviz.umd.js resources/js/
-        cp node_modules/d3/dist/d3.min.js resources/js/
-        cp node_modules/d3-graphviz/build/d3-graphviz.min.js resources/js/
-    - name: Compile
-      run: npm run compile
+      run: npm ci
+      
+    # Webpack now handles resource copying, so this step is no longer necessary
+    # but we keep it as a fallback in case webpack encounters issues
+    - name: Ensure JS Resources Directory Exists
+      run: mkdir -p resources/js
+      
+    - name: Clean Build
+      run: npm run clean
+      
+    - name: Lint
+      run: npm run lint
+      
     - name: Run Tests
       run: xvfb-run -a npm run test
-    - name: Package
-      run: npm run package
+      
+    - name: Package Extension
+      run: npm run package:vsix
+      
+    - name: Verify VSIX Content
+      run: |
+        npm install -g @vscode/vsce
+        echo "Checking VSIX content structure:"
+        vsce ls --tree vscode-csharp-dependency-graph-*.vsix

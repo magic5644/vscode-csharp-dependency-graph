@@ -9,7 +9,7 @@ window.vscode = acquireVsCodeApi();
 
 // Import functions from modules
 import { initializeGraphviz, renderGraph, resetView, showStatus } from './graphRenderer.js';
-import { clearHighlighting /* setupInteractivity */ } from './nodeHighlighter.js';
+import { clearHighlighting } from './nodeHighlighter.js';
 import { toggleCyclesView, updateCycleBadge } from './cycleAnalyzer.js';
 import { exportSvg } from './exportSvg.js';
 

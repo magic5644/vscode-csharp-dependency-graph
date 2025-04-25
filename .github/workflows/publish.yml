@@ -21,20 +21,40 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18.x'
+        cache: 'npm'
+        
     - name: Install Dependencies
-      run: npm install
-    - name: Copy JS Resources
-      run: |
-        mkdir -p resources/js
-        cp node_modules/@hpcc-js/wasm/dist/graphviz.umd.js resources/js/
-        cp node_modules/d3/dist/d3.min.js resources/js/
-        cp node_modules/d3-graphviz/build/d3-graphviz.min.js resources/js/
-    - name: Compile
-      run: npm run compile
+      run: npm ci
+      
+    # Webpack now handles resource copying, so this step is no longer necessary
+    # but we keep it as a fallback in case webpack encounters issues
+    - name: Ensure JS Resources Directory Exists
+      run: mkdir -p resources/js
+      
+    - name: Clean Build
+      run: npm run clean
+      
+    - name: Lint
+      run: npm run lint
+      
     - name: Run Tests
       run: xvfb-run -a npm run test
-    - name: Package
-      run: npm run package
+      
+    - name: Package Extension
+      run: npm run package:vsix
+      
+    - name: Verify VSIX Content
+      run: |
+        npm install -g @vscode/vsce
+        echo "Checking VSIX content structure:"
+        vsce ls --tree vscode-csharp-dependency-graph-*.vsix
+        
+    - name: Upload VSIX as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vscode-csharp-dependency-graph
+        path: "*.vsix"
+        if-no-files-found: error
     
   publish:
     permissions:
@@ -49,33 +69,38 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18.x'
+          cache: 'npm'
+          
       - name: Get Version from Tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
       - name: Update Package Version
         run: |
           npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+          
       - name: Install Dependencies
-        run: npm install
-      - name: Copy JS Resources
-        run: |
-          mkdir -p resources/js
-          cp node_modules/@hpcc-js/wasm/dist/graphviz.umd.js resources/js/
-          cp node_modules/d3/dist/d3.min.js resources/js/
-          cp node_modules/d3-graphviz/build/d3-graphviz.min.js resources/js/
-      - name: Package Extension
-        run: |
-          npm install -g @vscode/vsce
-          vsce package
+        run: npm ci
+        
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vscode-csharp-dependency-graph
+          
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
-          vsce publish -p $VSCE_PAT
+          npm install -g @vscode/vsce
+          vsce publish -p $VSCE_PAT --packagePath vscode-csharp-dependency-graph-${{ steps.get_version.outputs.VERSION }}.vsix
 
-      - name: Publish artifact
+      - name: Publish artifact to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: "vscode-csharp-dependency-graph-*"
+          files: "vscode-csharp-dependency-graph-*.vsix"
+          name: "v${{ steps.get_version.outputs.VERSION }}"
+          body: "Release v${{ steps.get_version.outputs.VERSION }}"
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
