@@ -1,18 +1,41 @@
+# Development folders
 .vscode/**
 .vscode-test/**
 src/**
-out/test/**
 test/**
-.gitignore
-tsconfig.json
-**/*.map
-**/*.ts
-.github/**
-node_modules/**
-package-lock.json
 test-workspace/**
-extension/out/**
+.github/**
+.git/**
+node_modules/**
+scripts/**
 assets/**
 Assets/**
 .qodo/**
-*.dot
+
+# Build files
+.gitignore
+tsconfig.json
+webpack.config.js
+package-lock.json
+.eslintrc.js
+*.vsix
+
+# Source maps and TypeScript files
+**/*.map
+**/*.ts
+
+# Exclude examples at the root level
+/examples/
+/examples/*.dot
+
+# Intermediate JS files
+dist/**/*.js.LICENSE.txt
+
+# Exclude redundant folders (now that we use dist versions)
+resources/**
+out/**
+
+# Keep webpack bundles and essential resources
+!dist/resources/**
+!dist/webviewScripts/**
+!dist/examples/**

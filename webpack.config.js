@@ -1,33 +1,29 @@
 //@ts-check
-
+/* eslint-disable @typescript-eslint/no-var-requires */
 'use strict';
 
-const path = require('path');  // Use require instead of import
+const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-/**@type {import('webpack').Configuration}*/
-const config = {
-  target: 'node', // VS Code extensions run in a Node.js-context
-  
-  entry: './src/extension.ts', // the entry point of this extension
-  
+// Main extension configuration
+/** @type {import('webpack').Configuration} */
+const extensionConfig = {
+  target: 'node',
+  entry: './src/extension.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../[resource-path]'
   },
-  
   devtool: 'source-map',
-  
   externals: {
-    vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded
+    vscode: 'commonjs vscode'
   },
-  
   resolve: {
     extensions: ['.ts', '.js'],
     mainFields: ['main', 'module']
   },
-  
   module: {
     rules: [
       {
@@ -38,7 +34,7 @@ const config = {
             loader: 'ts-loader',
             options: {
               compilerOptions: {
-                "module": "CommonJS", // Override TS config to ensure proper bundling
+                module: 'CommonJS'
               }
             }
           }
@@ -46,12 +42,65 @@ const config = {
       }
     ]
   },
-  
-  mode: 'production', // Explicitly set the mode to avoid warnings
-  
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { 
+          from: 'resources', 
+          to: 'resources',
+          globOptions: {
+            ignore: ['**/.DS_Store']
+          }
+        },
+        {
+          from: 'resources/js',
+          to: 'resources/js',
+          force: true,
+          globOptions: {
+            ignore: ['**/.DS_Store']
+          }
+        }
+      ]
+    })
+  ],
+  mode: 'production',
   stats: {
-    warnings: false // Use this instead of warningsFilter which is deprecated
+    warnings: false
+  },
+  infrastructureLogging: {
+    level: 'log'
+  },
+  optimization: {
+    minimize: true
   }
 };
 
-module.exports = config;
+// Webview scripts configuration
+/** @type {import('webpack').Configuration} */
+const webviewConfig = {
+  target: 'web',
+  entry: './src/webviewScripts/main.js',
+  output: {
+    path: path.resolve(__dirname, 'dist', 'webviewScripts'),
+    filename: 'graphPreviewBundle.js',
+    libraryTarget: 'window'
+  },
+  resolve: {
+    extensions: ['.js'],
+    mainFields: ['browser', 'module', 'main']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /node_modules/
+      }
+    ]
+  },
+  mode: 'production',
+  optimization: {
+    minimize: true
+  }
+};
+
+module.exports = [extensionConfig, webviewConfig];
