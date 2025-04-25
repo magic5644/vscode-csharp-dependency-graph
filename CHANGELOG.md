@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.6.9] - (Coming Soon)
+## [0.6.9] - 2025-04-25
 
 - **Added** Analyze cycles in the dependency graph (beta)
 - **Added** Generate a report of cycles in dependencies
+- **Added** Switch between cycles and dependencies in the preview graph (if cycles are detected)
 
 ## [0.6.8] - 2025-04-18
 
