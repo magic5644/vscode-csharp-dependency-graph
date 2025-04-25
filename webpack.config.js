@@ -47,7 +47,18 @@ const extensionConfig = {
       patterns: [
         { 
           from: 'resources', 
-          to: 'resources'
+          to: 'resources',
+          globOptions: {
+            ignore: ['**/.DS_Store']
+          }
+        },
+        {
+          from: 'resources/js',
+          to: 'resources/js',
+          force: true,
+          globOptions: {
+            ignore: ['**/.DS_Store']
+          }
         }
       ]
     })
