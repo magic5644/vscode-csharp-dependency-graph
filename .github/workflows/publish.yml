@@ -30,10 +30,11 @@ jobs:
     - name: Install VS Code Extension Manager
       run: npm install -g @vscode/vsce
       
-    # Webpack now handles resource copying, so this step is no longer necessary
-    # but we keep it as a fallback in case webpack encounters issues
-    - name: Ensure JS Resources Directory Exists
-      run: mkdir -p resources/js
+    # Check the resources/js directory to verify the files are present
+    - name: Verify JS Resources
+      run: |
+        echo "Checking existing JS resources:"
+        ls -la resources/js/
       
     - name: Clean Build
       run: npm run clean
