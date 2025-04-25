@@ -13,6 +13,7 @@ Generate interactive dependency graphs for C# projects and classes directly from
 - **Fixed Webview Initialization**: Resolved "Required script URIs are not defined" error in the Graphviz preview
 - **Added New NPM Scripts**: Simplified packaging process with optimized scripts for building and packaging
 - **SVG Export Enhancement**: Improved SVG export functionality from the graph preview
+- **Cycle Detection Improvements**: Enhanced cycle detection algorithm for better performance and accuracy
 
 ## Change Log
 
@@ -31,6 +32,9 @@ See [CHANGELOG.md](./CHANGELOG.md) for a list of changes in README.md
 - **Customizable colors**: Customize the colors of classes and packages in the graph
 - **Preview configuration options**: Preview configuration options in settings
 - **Export graph as SVG**: Export the generated graph as an SVG file for easy sharing and embedding
+- **Cycle detection**: Detect cycles in project and class dependencies
+- **Cycle report generation**: Generate a report of cycles in dependencies
+- **Cycle analysis**: Analyze hotspots and breakpoints in cycles
 
 ## Screenshots
 
