@@ -24,10 +24,10 @@ jobs:
     - name: Install VS Code Extension Manager
       run: npm install -g @vscode/vsce
       
-    # Check the resources/js directory to verify the files are present
+    # Verify JS Resources are available from Git
     - name: Verify JS Resources
       run: |
-        echo "Checking existing JS resources:"
+        echo "Verifying JS resources from Git repository:"
         ls -la resources/js/
       
     - name: Clean Build

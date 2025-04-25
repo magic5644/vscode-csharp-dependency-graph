@@ -5,6 +5,9 @@ node_modules/
 out/
 dist/
 resources/js/*.js
+!resources/js/d3.min.js
+!resources/js/d3-graphviz.min.js
+!resources/js/graphviz.umd.js
 *.vsix
 test-workspace/ProjectA/obj/
 test-workspace/ProjectA/bin/
