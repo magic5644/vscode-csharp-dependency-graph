@@ -44,21 +44,6 @@ jobs:
       
     - name: Run Tests
       run: xvfb-run -a npm run test
-      
-    - name: Package Extension
-      run: npm run package:vsix
-      
-    - name: Verify VSIX Content
-      run: |
-        echo "Checking VSIX content structure:"
-        vsce ls --tree vscode-csharp-dependency-graph-*.vsix
-        
-    - name: Upload VSIX as Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: vscode-csharp-dependency-graph
-        path: "*.vsix"
-        if-no-files-found: error
     
   publish:
     permissions:
@@ -89,11 +74,21 @@ jobs:
       # Install vsce for publishing
       - name: Install VS Code Extension Manager
         run: npm install -g @vscode/vsce
+
+      - name: Package Extension
+        run: npm run package:vsix
         
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - name: Verify VSIX Content
+        run: |
+          echo "Checking VSIX content structure:"
+          vsce ls --tree vscode-csharp-dependency-graph-*.vsix
+
+      - name: Upload VSIX as Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: vscode-csharp-dependency-graph
+          path: "*.vsix"
+          if-no-files-found: error
           
       - name: Publish to VS Code Marketplace
         env:
