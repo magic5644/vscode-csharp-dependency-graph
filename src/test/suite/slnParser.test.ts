@@ -6,7 +6,8 @@ import { findSolutionFiles, parseSolutionFile } from '../../slnParser';
 
 suite('SLN Parser Tests', () => {
   // Path to the test workspace folder with sample files
-  const testWorkspacePath = path.resolve(__dirname, '../../../test-workspace');
+  // Go up four levels from __dirname: out/src/test/suite -> project root
+  const testWorkspacePath = path.resolve(__dirname, '../../../../test-workspace');
 
   test('findSolutionFiles should find solution files', async function() {
     this.timeout(10000);

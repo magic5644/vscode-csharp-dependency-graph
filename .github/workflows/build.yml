@@ -29,6 +29,12 @@ jobs:
       run: |
         echo "Verifying JS resources from Git repository:"
         ls -la resources/js/
+        
+    # Check for malicious characters in Markdown files
+    - name: Check Markdown Files
+      run: |
+        echo "Checking Markdown files for malicious characters..."
+        npm run build:check-markdown
       
     - name: Clean Build
       run: npm run clean

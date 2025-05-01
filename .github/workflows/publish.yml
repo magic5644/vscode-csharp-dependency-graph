@@ -71,6 +71,12 @@ jobs:
       - name: Install Dependencies
         run: npm ci
         
+      # Check for malicious characters in Markdown files
+      - name: Check Markdown Files Security
+        run: |
+          echo "Checking Markdown files for malicious characters..."
+          npm run build:check-markdown
+        
       # Install vsce for publishing
       - name: Install VS Code Extension Manager
         run: npm install -g @vscode/vsce

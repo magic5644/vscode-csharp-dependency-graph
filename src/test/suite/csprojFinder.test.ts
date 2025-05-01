@@ -4,7 +4,8 @@ import { findCsprojFiles } from '../../csprojFinder';
 
 suite('CSProj Finder Tests', () => {
   // Path to the test workspace folder with sample files
-  const testWorkspacePath = path.resolve(__dirname, '../../../test-workspace');
+  // Go up four levels from __dirname: out/src/test/suite -> project root
+  const testWorkspacePath = path.resolve(__dirname, '../../../../test-workspace');
 
   test('findCsprojFiles should find projects with and without solution file', async function() {
     this.timeout(15000);
