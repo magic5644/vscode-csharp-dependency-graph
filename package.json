@@ -200,6 +200,7 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "rimraf out && tsc -p . --outDir out",
     "test": "node ./out/src/test/runTest.js",
+    "lint": "eslint src --ext ts",
     "lint-and-test": "npm run lint && npm run test",
     "test-compile": "tsc -p . --outDir out",
     "build:dev": "tsc -p . --outDir out",
