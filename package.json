@@ -205,7 +205,7 @@
     "build:dev": "tsc -p . --outDir out",
     "build:prod": "webpack --mode production --devtool hidden-source-map",
     "check-markdown": "ts-node scripts/markdownSecurityChecker.ts",
-    "build:check-markdown": "tsc scripts/markdownSecurityChecker.ts --esModuleInterop --resolveJsonModule --target es2019 --moduleResolution node --module commonjs && node scripts/markdownSecurityChecker.js",
+    "build:check-markdown": "node scripts/markdownSecurityChecker.js",
     "test:check-markdown": "ts-node scripts/markdownSecurityChecker.ts ./test-workspace"
   },
   "devDependencies": {

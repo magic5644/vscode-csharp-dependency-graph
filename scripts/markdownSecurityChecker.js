@@ -1,69 +1,129 @@
 #!/usr/bin/env node
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.MarkdownSecurityChecker = void 0;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const glob_1 = require("glob");
+
+const fs = require('fs');
+const path = require('path');
+// Using require syntax which avoids TypeScript typing issues
+const { glob } = require('glob');
+
 /**
  * Class for checking markdown files for potentially malicious characters
  */
 class MarkdownSecurityChecker {
+    // Define patterns for malicious characters
+    static MALICIOUS_CHAR_PATTERNS = [
+        // Zero-width characters
+        {
+            name: 'Zero-width space',
+            regex: /\u200B/g,
+            description: 'Invisible space character that can be used to hide text'
+        },
+        {
+            name: 'Zero-width non-joiner',
+            regex: /\u200C/g,
+            description: 'Prevents characters from joining in scripts that use ligatures'
+        },
+        {
+            name: 'Zero-width joiner',
+            regex: /\u200D/g,
+            description: 'Joins characters that normally would not join'
+        },
+        {
+            name: 'Zero-width no-break space',
+            regex: /\uFEFF/g,
+            description: 'Byte order mark or zero-width non-breaking space'
+        },
+        
+        // Unicode control and format characters - Excluding common ASCII characters
+        {
+            name: 'Control characters',
+            regex: /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g,
+            description: 'ASCII and Unicode control characters'
+        },
+        {
+            name: 'Format characters',
+            regex: /[\u2000-\u200F\u2028-\u202F\u205F-\u206F]/g,
+            description: 'Unicode format and control characters'
+        },
+        
+        // Bidirectional override characters
+        {
+            name: 'LTR Override',
+            regex: /\u202D/g,
+            description: 'Left-to-Right Override'
+        },
+        {
+            name: 'RTL Override',
+            regex: /\u202E/g,
+            description: 'Right-to-Left Override - Can be used for spoofing'
+        },
+        {
+            name: 'LTR Embedding',
+            regex: /\u202A/g,
+            description: 'Left-to-Right Embedding'
+        },
+        {
+            name: 'RTL Embedding',
+            regex: /\u202B/g,
+            description: 'Right-to-Left Embedding'
+        },
+        {
+            name: 'PDF',
+            regex: /\u202C/g,
+            description: 'Pop Directional Formatting'
+        },
+        
+        // Invisible operators
+        {
+            name: 'Invisible Times',
+            regex: /\u2062/g,
+            description: 'Invisible times operator'
+        },
+        {
+            name: 'Invisible Plus',
+            regex: /\u2064/g,
+            description: 'Invisible plus operator'
+        },
+        {
+            name: 'Invisible Separator',
+            regex: /\u2063/g,
+            description: 'Invisible separator/comma'
+        },
+        
+        // Variation selectors and language tags
+        {
+            name: 'Variation Selectors',
+            regex: /[\uFE00-\uFE0F\uE0100-\uE01EF]/g,
+            description: 'Variation selectors for glyph variants'
+        },
+        {
+            name: 'Language Tag Characters',
+            regex: /[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/g,
+            description: 'Characters used in language tags'
+        }
+    ];
+
     /**
      * Find all Markdown files in the given workspace folder
-     * @param workspaceFolder The workspace folder to search in
-     * @returns A promise that resolves to an array of file paths
+     * @param {string} workspaceFolder The workspace folder to search in
+     * @returns {Promise<string[]>} A promise that resolves to an array of file paths
      */
     static async findMarkdownFiles(workspaceFolder) {
         try {
-            const files = await (0, glob_1.glob)('**/*.{md,mdc}', {
+            const files = await glob('**/*.{md,mdc}', {
                 cwd: workspaceFolder,
                 ignore: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/bin/**', '**/obj/**']
             });
             return files.map(file => path.join(workspaceFolder, file));
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Error finding Markdown files:', error);
             return [];
         }
     }
+
     /**
      * Check a single file for malicious characters
-     * @param filePath The path to the file to check
-     * @returns A CheckResult with any findings
+     * @param {string} filePath The path to the file to check
+     * @returns {Promise<Object>} A CheckResult with any findings
      */
     static async checkFile(filePath) {
         const content = await fs.promises.readFile(filePath, 'utf8');
@@ -72,6 +132,7 @@ class MarkdownSecurityChecker {
             filePath,
             findings: []
         };
+
         lines.forEach((line, lineIdx) => {
             this.MALICIOUS_CHAR_PATTERNS.forEach(charPattern => {
                 let match;
@@ -93,40 +154,48 @@ class MarkdownSecurityChecker {
                 charPattern.regex.lastIndex = 0;
             });
         });
+
         return result;
     }
+
     /**
      * Check all Markdown files in a workspace folder
-     * @param workspaceFolder The workspace folder to check
-     * @returns An array of check results for each file
+     * @param {string} workspaceFolder The workspace folder to check
+     * @returns {Promise<Array>} An array of check results for each file
      */
     static async checkWorkspace(workspaceFolder) {
         const files = await this.findMarkdownFiles(workspaceFolder);
         const results = [];
+        
         for (const file of files) {
             const result = await this.checkFile(file);
             if (result.findings.length > 0) {
                 results.push(result);
             }
         }
+        
         return results;
     }
+
     /**
      * Generate a report from check results
-     * @param results Check results to report on
-     * @returns A formatted string report
+     * @param {Array} results Check results to report on
+     * @returns {string} A formatted string report
      */
     static generateReport(results) {
         if (results.length === 0) {
             return 'No malicious characters found in Markdown files. ✅';
         }
+
         let report = '# Markdown Security Check Report\n\n';
         report += `Date: ${new Date().toISOString()}\n\n`;
         report += `Found ${results.length} file(s) with potential security issues:\n\n`;
+
         results.forEach(result => {
             report += `## ${path.basename(result.filePath)}\n`;
             report += `Path: ${result.filePath}\n\n`;
             report += `Total findings: ${result.findings.length}\n\n`;
+            
             const groupedByType = result.findings.reduce((acc, finding) => {
                 const type = finding.charInfo.name;
                 if (!acc[type]) {
@@ -135,114 +204,32 @@ class MarkdownSecurityChecker {
                 acc[type].push(finding);
                 return acc;
             }, {});
+
             Object.entries(groupedByType).forEach(([type, findings]) => {
                 report += `### ${type} (${findings.length})\n`;
                 report += `${findings[0].charInfo.description}\n\n`;
+                
                 report += '| Line | Column | Character Code |\n';
                 report += '|------|--------|---------------|\n';
+                
                 findings.forEach(finding => {
                     const charCode = Array.from(finding.character)
                         .map(c => `U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`)
                         .join(' ');
+                    
                     report += `| ${finding.position.line} | ${finding.position.column} | ${charCode} |\n`;
                 });
+                
                 report += '\n';
             });
+            
             report += '\n';
         });
+
         return report;
     }
 }
-exports.MarkdownSecurityChecker = MarkdownSecurityChecker;
-// Define patterns for malicious characters
-MarkdownSecurityChecker.MALICIOUS_CHAR_PATTERNS = [
-    // Zero-width characters
-    {
-        name: 'Zero-width space',
-        regex: /\u200B/g,
-        description: 'Invisible space character that can be used to hide text'
-    },
-    {
-        name: 'Zero-width non-joiner',
-        regex: /\u200C/g,
-        description: 'Prevents characters from joining in scripts that use ligatures'
-    },
-    {
-        name: 'Zero-width joiner',
-        regex: /\u200D/g,
-        description: 'Joins characters that normally would not join'
-    },
-    {
-        name: 'Zero-width no-break space',
-        regex: /\uFEFF/g,
-        description: 'Byte order mark or zero-width non-breaking space'
-    },
-    // Unicode control and format characters - Excluding common ASCII characters
-    {
-        name: 'Control characters',
-        regex: /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g,
-        description: 'ASCII and Unicode control characters'
-    },
-    {
-        name: 'Format characters',
-        regex: /[\u2000-\u200F\u2028-\u202F\u205F-\u206F]/g,
-        description: 'Unicode format and control characters'
-    },
-    // Bidirectional override characters
-    {
-        name: 'LTR Override',
-        regex: /\u202D/g,
-        description: 'Left-to-Right Override'
-    },
-    {
-        name: 'RTL Override',
-        regex: /\u202E/g,
-        description: 'Right-to-Left Override - Can be used for spoofing'
-    },
-    {
-        name: 'LTR Embedding',
-        regex: /\u202A/g,
-        description: 'Left-to-Right Embedding'
-    },
-    {
-        name: 'RTL Embedding',
-        regex: /\u202B/g,
-        description: 'Right-to-Left Embedding'
-    },
-    {
-        name: 'PDF',
-        regex: /\u202C/g,
-        description: 'Pop Directional Formatting'
-    },
-    // Invisible operators
-    {
-        name: 'Invisible Times',
-        regex: /\u2062/g,
-        description: 'Invisible times operator'
-    },
-    {
-        name: 'Invisible Plus',
-        regex: /\u2064/g,
-        description: 'Invisible plus operator'
-    },
-    {
-        name: 'Invisible Separator',
-        regex: /\u2063/g,
-        description: 'Invisible separator/comma'
-    },
-    // Variation selectors and language tags - Fixed to only include actual variation selectors
-    {
-        name: 'Variation Selectors',
-        regex: /[\uFE00-\uFE0F\uE0100-\uE01EF]/g,
-        description: 'Variation selectors for glyph variants'
-    },
-    {
-        name: 'Language Tag Characters',
-        // Removing normal ASCII characters from this pattern
-        regex: /[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/g,
-        description: 'Characters used in language tags'
-    }
-];
+
 /**
  * Main function to run the script
  */
@@ -250,29 +237,31 @@ async function main() {
     try {
         // Get workspace folder from command line arguments or use current directory
         const workspaceFolder = process.argv[2] || process.cwd();
+        
         console.log(`Checking Markdown files in ${workspaceFolder} for malicious characters...`);
+        
         // Check workspace for malicious characters
         const results = await MarkdownSecurityChecker.checkWorkspace(workspaceFolder);
+        
         // Generate and print report
         const report = MarkdownSecurityChecker.generateReport(results);
         console.log(report);
+        
         // Exit with error code if malicious characters were found (for CI/CD integration)
         if (results.length > 0) {
             console.error('❌ Malicious characters detected in Markdown files. Exiting with error code 1.');
             process.exit(1);
-        }
-        else {
+        } else {
             console.log('✅ No malicious characters detected in Markdown files.');
             process.exit(0);
         }
-    }
-    catch (error) {
+    } catch (error) {
         console.error('Error running Markdown security check:', error);
         process.exit(2);
     }
 }
+
 // Run the script when it's directly executed (not imported)
 if (require.main === module) {
     main();
 }
-//# sourceMappingURL=markdownSecurityChecker.js.map

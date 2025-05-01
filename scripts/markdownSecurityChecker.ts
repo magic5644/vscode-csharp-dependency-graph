@@ -2,6 +2,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+// Import glob correctly for v11.0.2
 import { glob } from 'glob';
 
 /**
@@ -137,7 +138,7 @@ export class MarkdownSecurityChecker {
                 cwd: workspaceFolder,
                 ignore: ['**/node_modules/**', '**/dist/**', '**/out/**', '**/bin/**', '**/obj/**']
             });
-            return files.map(file => path.join(workspaceFolder, file));
+            return files.map((file: string) => path.join(workspaceFolder, file));
         } catch (error) {
             console.error('Error finding Markdown files:', error);
             return [];
