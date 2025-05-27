@@ -46,8 +46,8 @@ suite('Extension Test Suite', () => {
   test('Solution file parser should integrate with csproj finder', async function() {
     this.timeout(10000);
     
-    // Path to the test workspace
-    const testWorkspace = path.resolve(__dirname, '../../../test-workspace');
+    // Path to the test workspace - fix path to go up 4 levels
+    const testWorkspace = path.resolve(__dirname, '../../../../test-workspace');
     
     // Find the solution file directly
     const slnPath = path.join(testWorkspace, 'TestSolution.sln');

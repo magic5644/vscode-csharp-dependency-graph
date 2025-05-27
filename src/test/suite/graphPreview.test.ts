@@ -188,7 +188,12 @@ suite('GraphPreviewProvider Test Suite', () => {
       // Verify expectations
       assert.ok(showSaveDialogStub.called, 'showSaveDialog should be called');
       assert.ok(bufferFromSpy.called, 'Buffer.from should be called');
-      assert.ok(bufferFromSpy.calledWith('<svg>Test SVG</svg>', 'utf8'), 'Buffer.from should be called with correct args');
+      // Use firstCall.args instead of calledWith to avoid type issues with Buffer.from
+      assert.deepStrictEqual(
+        bufferFromSpy.firstCall.args, 
+        ['<svg>Test SVG</svg>', 'utf8'], 
+        'Buffer.from should be called with correct args'
+      );
       assert.ok(showInfoStub.called, 'showInformationMessage should be called');
     } finally {
       // Restore original method
