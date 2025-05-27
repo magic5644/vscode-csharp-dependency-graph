@@ -188,7 +188,7 @@ suite('GraphPreviewProvider Test Suite', () => {
       // Verify expectations
       assert.ok(showSaveDialogStub.called, 'showSaveDialog should be called');
       assert.ok(bufferFromSpy.called, 'Buffer.from should be called');
-      // Utilise firstCall.args au lieu de calledWith pour éviter les problèmes de typage avec Buffer.from
+      // Use firstCall.args instead of calledWith to avoid type issues with Buffer.from
       assert.deepStrictEqual(
         bufferFromSpy.firstCall.args, 
         ['<svg>Test SVG</svg>', 'utf8'], 
