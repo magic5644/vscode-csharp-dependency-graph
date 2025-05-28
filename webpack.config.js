@@ -103,4 +103,60 @@ const webviewConfig = {
   }
 };
 
-module.exports = [extensionConfig, webviewConfig];
+// Modern webview configuration
+/** @type {import('webpack').Configuration} */
+const modernWebviewConfig = {
+  target: 'web',
+  entry: {
+    'simple-graph': './src/webview/simple-graph.ts'
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist', 'webview'),
+    filename: '[name].bundle.js',
+    libraryTarget: 'window'
+  },
+  resolve: {
+    extensions: ['.ts', '.js'],
+    mainFields: ['browser', 'module', 'main']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              configFile: path.resolve(__dirname, 'src/webview/tsconfig.webview.json')
+            }
+          }
+        ]
+      },
+      {
+        test: /\.js$/,
+        exclude: /node_modules/
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'src/webview/modern-graph.css',
+          to: 'modern-graph.css'
+        }
+      ]
+    })
+  ],
+  mode: 'production',
+  optimization: {
+    minimize: true
+  }
+};
+
+module.exports = [extensionConfig, webviewConfig, modernWebviewConfig];
