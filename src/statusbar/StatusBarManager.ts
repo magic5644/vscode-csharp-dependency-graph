@@ -12,7 +12,7 @@ export interface StatusBarItemOptions {
 
 export class StatusBarManager {
     private static instance: StatusBarManager;
-    private statusBarItems = new Map<string, vscode.StatusBarItem>();
+    private readonly statusBarItems = new Map<string, vscode.StatusBarItem>();
     private readonly defaultPriority = 100;
 
     private constructor() {}
@@ -30,8 +30,6 @@ export class StatusBarManager {
     public static resetInstance(): void {
         if (StatusBarManager.instance) {
             StatusBarManager.instance.dispose();
-            // @ts-expect-error - Reset for testing purposes
-            StatusBarManager.instance = undefined;
         }
     }
 
@@ -146,7 +144,14 @@ export class StatusBarManager {
      * Set contextual information in status bar
      */
     public setContextualInfo(message: string, type?: 'project' | 'class'): void {
-        const icon = type === 'project' ? '$(symbol-package)' : type === 'class' ? '$(symbol-class)' : '$(info)';
+        let icon: string;
+        if (type === 'project') {
+            icon = '$(symbol-package)';
+        } else if (type === 'class') {
+            icon = '$(symbol-class)';
+        } else {
+            icon = '$(info)';
+        }
         this.createItem('contextualInfo', {
             text: `${icon} ${message}`,
             tooltip: `Context: ${message}`,

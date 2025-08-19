@@ -16,6 +16,7 @@
   },
   "include": [
     "simple-graph.ts",
+    "modern-graph.ts",
     "webview.d.ts"
   ],
   "exclude": [

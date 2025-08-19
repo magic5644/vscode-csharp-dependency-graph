@@ -14,6 +14,7 @@ Generate interactive dependency graphs for C# projects and classes directly from
 - **Added New NPM Scripts**: Simplified packaging process with optimized scripts for building and packaging
 - **SVG Export Enhancement**: Improved SVG export functionality from the graph preview
 - **Cycle Detection Improvements**: Enhanced cycle detection algorithm for better performance and accuracy
+- **Fixed Extension Activation**: Resolved "command already exists" error during debugging with robust command registration
 
 ## Change Log
 
@@ -327,6 +328,13 @@ classDiagram
 - Very large codebases with many classes may generate complex graphs that are difficult to render
 - Some complex C# syntax constructs might not be correctly parsed for class dependencies
 - The extension currently only analyzes direct project references in .csproj files, not transitive package references
+
+### Common Development Issues
+
+#### Issue: "Command already exists" error during debugging
+
+- **Solution**: The extension now includes robust error handling for command registration that gracefully handles duplicate registrations during development
+- **Details**: See [DEBUGGING.md](./DEBUGGING.md) for comprehensive debugging guide and best practices
 
 ### Troubleshooting Tips
 

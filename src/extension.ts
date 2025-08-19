@@ -52,6 +52,40 @@ let statusBarManager: StatusBarManager;
 let keybindingManager: KeybindingManager;
 let modernGraphProvider: ModernGraphWebviewProvider;
 
+/**
+ * Safely registers a VS Code command with error handling for duplicate registrations
+ * @param context The extension context
+ * @param commandId The command identifier
+ * @param handler The command handler function
+ * @returns The disposable if successful, null if the command was already registered
+ */
+async function safeRegisterCommand(
+  context: vscode.ExtensionContext,
+  commandId: string,
+  handler: (...args: any[]) => any
+): Promise<vscode.Disposable | null> {
+  try {
+    // Check if command already exists
+    const existingCommands = await vscode.commands.getCommands(true);
+    if (existingCommands.includes(commandId)) {
+      console.warn(`Command ${commandId} already exists, skipping registration...`);
+      return null;
+    }
+
+    const disposable = vscode.commands.registerCommand(commandId, handler);
+    context.subscriptions.push(disposable);
+    return disposable;
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('already exists')) {
+      console.warn(`Command ${commandId} already registered, skipping...`);
+      return null;
+    } else {
+      console.error(`Error registering command ${commandId}:`, error);
+      throw error;
+    }
+  }
+}
+
 function isPathMatchingPattern(filePath: string, pattern: string): boolean {
   const fileName = path.basename(filePath);
   return pattern.includes("/")
@@ -77,6 +111,8 @@ function isPathMatchingAnyPattern(
 
 export async function activate(context: vscode.ExtensionContext) {
   try {
+    console.log('C# Dependency Graph extension is being activated...');
+    
     await initializeVizJs(context);
   } catch (error) {
     console.error("Error initializing Viz.js:", error);
@@ -85,42 +121,91 @@ export async function activate(context: vscode.ExtensionContext) {
     );
   }
 
-	// Initialize modern UI components
-	notificationManager = NotificationManager.getInstance();
-	statusBarManager = StatusBarManager.getInstance();
-	keybindingManager = KeybindingManager.getInstance();
-	modernGraphProvider = new ModernGraphWebviewProvider(context.extensionUri, context);
+  try {
+    // Initialize modern UI components
+    notificationManager = NotificationManager.getInstance();
+    statusBarManager = StatusBarManager.getInstance();
+    keybindingManager = KeybindingManager.getInstance();
+    modernGraphProvider = new ModernGraphWebviewProvider(context.extensionUri, context);
 
-  // Add to disposables
-  context.subscriptions.push(
-    notificationManager,
-    statusBarManager,
-    keybindingManager,
-    modernGraphProvider
-  );
+    // Register the webview provider
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(
+        ModernGraphWebviewProvider.viewType,
+        modernGraphProvider,
+        {
+          webviewOptions: {
+            retainContextWhenHidden: true
+          }
+        }
+      )
+    );
 
-  const graphPreviewProvider = new GraphPreviewProvider(context.extensionUri);
+    // Add to disposables
+    context.subscriptions.push(
+      notificationManager,
+      statusBarManager,
+      keybindingManager,
+      modernGraphProvider
+    );
 
-  // Register main command
-  registerDependencyGraphCommand(context, graphPreviewProvider);
+    const graphPreviewProvider = new GraphPreviewProvider(context.extensionUri);
 
-  // Register preview command
-  registerGraphvizPreviewCommand(context, graphPreviewProvider);
+    // Register commands with error handling
+    try {
+      // Register main command
+      await registerDependencyGraphCommand(context, graphPreviewProvider);
+      console.log('Registered main dependency graph command');
 
-  // Register cycle analysis commands
-  registerCycleAnalysisCommands(context, graphPreviewProvider);
+      // Register preview command
+      await registerGraphvizPreviewCommand(context, graphPreviewProvider);
+      console.log('Registered Graphviz preview command');
 
-  // Register modern graph commands
-  registerModernGraphCommands(context);
+      // Register cycle analysis commands
+      await registerCycleAnalysisCommands(context, graphPreviewProvider);
+      console.log('Registered cycle analysis commands');
 
-  // Setup auto-preview for Graphviz files
-  setupAutoPreview(graphPreviewProvider);
+      // Register modern graph commands
+      await registerModernGraphCommands(context);
+      console.log('Registered modern graph commands');
+    } catch (error) {
+      console.error('Error registering commands:', error);
+      vscode.window.showErrorMessage(
+        `C# Dependency Graph: Error registering commands: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
 
-  // Initialize keybindings
-  await keybindingManager.initialize(context);
+    // Setup auto-preview for Graphviz files
+    try {
+      setupAutoPreview(graphPreviewProvider);
+      console.log('Setup auto-preview for Graphviz files');
+    } catch (error) {
+      console.error('Error setting up auto-preview:', error);
+    }
 
-  // Show welcome notification
-  notificationManager.showInfo("C# Dependency Graph extension activated with modern UX!");
+    // Initialize keybindings
+    try {
+      await keybindingManager.initialize(context);
+      console.log('Initialized keybindings');
+    } catch (error) {
+      console.error('Error initializing keybindings:', error);
+    }
+
+    // Show welcome notification
+    try {
+      await notificationManager.showInfo("C# Dependency Graph extension activated with modern UX!");
+    } catch (error) {
+      console.error('Error showing welcome notification:', error);
+    }
+
+    console.log('C# Dependency Graph extension activated successfully');
+  } catch (error) {
+    console.error('Critical error during extension activation:', error);
+    vscode.window.showErrorMessage(
+      `C# Dependency Graph: Critical activation error: ${error instanceof Error ? error.message : String(error)}`
+    );
+    throw error; // Re-throw to prevent partial activation
+  }
 }
 
 async function initializeVizJs(context: vscode.ExtensionContext): Promise<void> {
@@ -136,11 +221,12 @@ async function initializeVizJs(context: vscode.ExtensionContext): Promise<void> 
   );
 }
 
-function registerDependencyGraphCommand(
+async function registerDependencyGraphCommand(
   context: vscode.ExtensionContext,
   graphPreviewProvider: GraphPreviewProvider
-): void {
-  const disposable = vscode.commands.registerCommand(
+): Promise<void> {
+  await safeRegisterCommand(
+    context,
     "vscode-csharp-dependency-graph.generate-dependency-graph",
     async () => {
       try {
@@ -199,8 +285,6 @@ function registerDependencyGraphCommand(
       }
     }
   );
-
-  context.subscriptions.push(disposable);
 }
 
 function loadConfiguration() {
@@ -784,55 +868,54 @@ async function handleCycleAnalysis(
   );
 }
 
-function registerGraphvizPreviewCommand(
+async function registerGraphvizPreviewCommand(
   context: vscode.ExtensionContext,
   graphPreviewProvider: GraphPreviewProvider
-): void {
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-csharp-dependency-graph.previewGraphviz",
-      async () => {
-        const editor = vscode.window.activeTextEditor;
-        if (
-          editor &&
-          (editor.document.languageId === "dot" ||
-            editor.document.fileName.endsWith(".dot") ||
-            editor.document.fileName.endsWith(".gv"))
-        ) {
-          const dotContent = editor.document.getText();
-          const title = path.basename(editor.document.fileName);
-          
-          // Store content and title for later use (for cycle analysis)
-          _lastDotContent = dotContent;
-          lastGraphTitle = title;
-          
-          // Analyze cycles in the graph before showing preview
-          await analyzeCyclesInDotContent(dotContent, editor.document.fileName);
-          
-          // Now show the preview with cycle data
-          const sanitizeResult = sanitizeDotContent(dotContent);
-          
-          // Only create cycles-only content if cycles were detected
-          let cyclesOnlyContent = undefined;
-          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
-            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
-            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
-            cyclesOnlyContent = cyclesOnlySanitized.content;
-          }
-          
-          graphPreviewProvider.showPreview(
-            sanitizeResult.content,
-            title,
-            editor.document.fileName,
-            cyclesOnlyContent
-          );
-        } else {
-          vscode.window.showErrorMessage(
-            "No Graphviz file is currently open."
-          );
+): Promise<void> {
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.previewGraphviz",
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (
+        editor &&
+        (editor.document.languageId === "dot" ||
+          editor.document.fileName.endsWith(".dot") ||
+          editor.document.fileName.endsWith(".gv"))
+      ) {
+        const dotContent = editor.document.getText();
+        const title = path.basename(editor.document.fileName);
+        
+        // Store content and title for later use (for cycle analysis)
+        _lastDotContent = dotContent;
+        lastGraphTitle = title;
+        
+        // Analyze cycles in the graph before showing preview
+        await analyzeCyclesInDotContent(dotContent, editor.document.fileName);
+        
+        // Now show the preview with cycle data
+        const sanitizeResult = sanitizeDotContent(dotContent);
+        
+        // Only create cycles-only content if cycles were detected
+        let cyclesOnlyContent = undefined;
+        if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+          const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+          const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+          cyclesOnlyContent = cyclesOnlySanitized.content;
         }
+        
+        graphPreviewProvider.showPreview(
+          sanitizeResult.content,
+          title,
+          editor.document.fileName,
+          cyclesOnlyContent
+        );
+      } else {
+        vscode.window.showErrorMessage(
+          "No Graphviz file is currently open."
+        );
       }
-    )
+    }
   );
 }
 
@@ -870,6 +953,10 @@ function setupAutoPreview(
     "openPreviewOnGraphvizFileOpen",
     true
   );
+  const useModernView = config.get<boolean>(
+    "useModernViewForDotFiles",
+    true
+  );
 
   // Set to track files that have already been previewed
   const previewedFiles = new Set<string>();
@@ -898,23 +985,30 @@ function setupAutoPreview(
         // Analyze cycles in the graph before showing preview
         await analyzeCyclesInDotContent(dotContent, document.fileName);
         
-        // Now show the preview with cycle data
-        const sanitizeResult = sanitizeDotContent(dotContent);
-        
-        // Only create cycles-only content if cycles were detected
-        let cyclesOnlyContent = undefined;
-        if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
-          const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
-          const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
-          cyclesOnlyContent = cyclesOnlySanitized.content;
+        if (useModernView) {
+          // Use modern graph view
+          if (modernGraphProvider) {
+            await modernGraphProvider.openGraphView(document.uri);
+          }
+        } else {
+          // Use traditional preview
+          const sanitizeResult = sanitizeDotContent(dotContent);
+          
+          // Only create cycles-only content if cycles were detected
+          let cyclesOnlyContent = undefined;
+          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+            const cyclesOnlyDot = generateCyclesOnlyGraph(lastCycleAnalysisResult.cycles);
+            const cyclesOnlySanitized = sanitizeDotContent(cyclesOnlyDot);
+            cyclesOnlyContent = cyclesOnlySanitized.content;
+          }
+          
+          graphPreviewProvider.showPreview(
+            sanitizeResult.content,
+            title,
+            document.fileName,
+            cyclesOnlyContent
+          );
         }
-        
-        graphPreviewProvider.showPreview(
-          sanitizeResult.content,
-          title,
-          document.fileName,
-          cyclesOnlyContent
-        );
       }
     });
 
@@ -925,276 +1019,266 @@ function setupAutoPreview(
   }
 }
 
-function registerCycleAnalysisCommands(
+async function registerCycleAnalysisCommands(
   context: vscode.ExtensionContext,
   graphPreviewProvider: GraphPreviewProvider
-): void {
+): Promise<void> {
   // Register command to analyze cycles in a dependency graph
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-csharp-dependency-graph.analyze-cycles",
-      async (fileUri?: vscode.Uri) => {
-        try {
-          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-          if (!workspaceFolder) {
-            vscode.window.showErrorMessage("No workspace folder open");
-            return;
-          }
-
-          // Get the dot file content and path
-          const { dotFilePath, dotContent } = await getDotFileContent(fileUri);
-          if (!dotFilePath || !dotContent) {
-            return; // Error already shown to user
-          }
-
-          // Store content and title for later use
-          _lastDotContent = dotContent;
-          lastGraphTitle = path.basename(dotFilePath);
-
-          // Start progress indicator
-          await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: "Analyzing dependency cycles...",
-            cancellable: false,
-          }, async (progress) => {
-            await handleCycleAnalysis(dotContent, dotFilePath, progress, graphPreviewProvider);
-          });
-          
-          // Show options based on analysis results
-          if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
-            vscode.window.showInformationMessage(
-              `${lastCycleAnalysisResult.cycles.length} cycles detected in the dependency graph`,
-              "View Cycles Only", 
-              "Generate Report"
-            ).then(selection => {
-              if (selection === "View Cycles Only") {
-                showCyclesOnlyGraph(graphPreviewProvider);
-              } else if (selection === "Generate Report") {
-                generateAndShowCycleReport(workspaceFolder);
-              }
-            });
-          }
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          vscode.window.showErrorMessage(`Error analyzing cycles: ${errorMessage}`);
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.analyze-cycles",
+    async (fileUri?: vscode.Uri) => {
+      try {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+          vscode.window.showErrorMessage("No workspace folder open");
+          return;
         }
+
+        // Get the dot file content and path
+        const { dotFilePath, dotContent } = await getDotFileContent(fileUri);
+        if (!dotFilePath || !dotContent) {
+          return; // Error already shown to user
+        }
+
+        // Store content and title for later use
+        _lastDotContent = dotContent;
+        lastGraphTitle = path.basename(dotFilePath);
+
+        // Start progress indicator
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: "Analyzing dependency cycles...",
+          cancellable: false,
+        }, async (progress) => {
+          await handleCycleAnalysis(dotContent, dotFilePath, progress, graphPreviewProvider);
+        });
+        
+        // Show options based on analysis results
+        if (lastCycleAnalysisResult && lastCycleAnalysisResult.cycles.length > 0) {
+          vscode.window.showInformationMessage(
+            `${lastCycleAnalysisResult.cycles.length} cycles detected in the dependency graph`,
+            "View Cycles Only", 
+            "Generate Report"
+          ).then(selection => {
+            if (selection === "View Cycles Only") {
+              showCyclesOnlyGraph(graphPreviewProvider);
+            } else if (selection === "Generate Report") {
+              generateAndShowCycleReport(workspaceFolder);
+            }
+          });
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Error analyzing cycles: ${errorMessage}`);
       }
-    )
+    }
   );
 
   // Register command to generate a cycle report
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-csharp-dependency-graph.generate-cycle-report",
-      async (fileUri?: vscode.Uri) => {
-        try {
-          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-          if (!workspaceFolder) {
-            vscode.window.showErrorMessage("No workspace folder open");
-            return;
-          }
-
-          // If we already have analysis results, use them
-          if (!lastCycleAnalysisResult && fileUri) {
-            // Run the analysis command first to get the results
-            await vscode.commands.executeCommand("vscode-csharp-dependency-graph.analyze-cycles", fileUri);
-            
-            // If analysis failed or no cycles were detected
-            if (!lastCycleAnalysisResult) {
-              return;
-            }
-          } else if (!lastCycleAnalysisResult) {
-            vscode.window.showErrorMessage(
-              "No cycle analysis results available. Please analyze a dependency graph first."
-            );
-            return;
-          }
-
-          generateAndShowCycleReport(workspaceFolder);
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          vscode.window.showErrorMessage(`Error generating cycle report: ${errorMessage}`);
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.generate-cycle-report",
+    async (fileUri?: vscode.Uri) => {
+      try {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+          vscode.window.showErrorMessage("No workspace folder open");
+          return;
         }
+
+        // If we already have analysis results, use them
+        if (!lastCycleAnalysisResult && fileUri) {
+          // Run the analysis command first to get the results
+          await vscode.commands.executeCommand("vscode-csharp-dependency-graph.analyze-cycles", fileUri);
+          
+          // If analysis failed or no cycles were detected
+          if (!lastCycleAnalysisResult) {
+            return;
+          }
+        } else if (!lastCycleAnalysisResult) {
+          vscode.window.showErrorMessage(
+            "No cycle analysis results available. Please analyze a dependency graph first."
+          );
+          return;
+        }
+
+        generateAndShowCycleReport(workspaceFolder);
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Error generating cycle report: ${errorMessage}`);
       }
-    )
+    }
   );
 }
 
-function registerModernGraphCommands(context: vscode.ExtensionContext): void {
+async function registerModernGraphCommands(context: vscode.ExtensionContext): Promise<void> {
   // Register command to open modern graph view
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-csharp-dependency-graph.open-modern-view",
-      async (fileUri?: vscode.Uri) => {
-        try {
-          if (modernGraphProvider) {
-            if (fileUri) {
-              await modernGraphProvider.openGraphView(fileUri);
-            } else {
-              // If no file URI provided, use the active editor's file
-              const activeEditor = vscode.window.activeTextEditor;
-              if (activeEditor) {
-                await modernGraphProvider.openGraphView(activeEditor.document.uri);
-              } else {
-                vscode.window.showErrorMessage("No file selected and no active editor");
-              }
-            }
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.open-modern-graph",
+    async (fileUri?: vscode.Uri) => {
+      try {
+        if (modernGraphProvider) {
+          if (fileUri) {
+            await modernGraphProvider.openGraphView(fileUri);
           } else {
-            vscode.window.showErrorMessage("Modern graph provider not initialized");
+            // If no file URI provided, use the active editor's file
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+              await modernGraphProvider.openGraphView(activeEditor.document.uri);
+            } else {
+              vscode.window.showErrorMessage("No file selected and no active editor");
+            }
           }
-        } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          notificationManager.showError(`Failed to open modern view: ${errorMessage}`);
+        } else {
+          vscode.window.showErrorMessage("Modern graph provider not initialized");
         }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        notificationManager.showError(`Failed to open modern view: ${errorMessage}`);
       }
-    )
+    }
   );
 
   // Register command to generate graph with modern view
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-csharp-dependency-graph.generate-modern-graph",
-      async () => {
-        try {
-          const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-          if (!workspaceFolder) {
-            notificationManager.showError("No workspace folder open");
-            return;
-          }
-
-          // Show progress notification
-          await notificationManager.showProgress(
-            "Generating Modern Dependency Graph",
-            async (progress, _token) => {
-              progress.report({ message: "Analyzing project structure..." });
-
-              const config = loadConfiguration();
-              const selectedSolutionFile = await findAndSelectSolutionFile(workspaceFolder, config);
-              
-              if (selectedSolutionFile === null) {
-                return; // User cancelled
-              }
-
-              progress.report({ message: "Selecting graph type...", increment: 20 });
-              const graphType = await selectGraphType();
-              if (!graphType) {
-                return; // User cancelled
-              }
-
-              const generateClassGraph = graphType.label === "Class Dependencies";
-              
-              progress.report({ message: "Generating graph data...", increment: 40 });
-              const dotContent = await generateGraphContent(
-                workspaceFolder,
-                selectedSolutionFile,
-                generateClassGraph,
-                config
-              );
-
-              progress.report({ message: "Opening modern view...", increment: 80 });
-              if (modernGraphProvider) {
-                await modernGraphProvider.showGraph(dotContent, {
-                  title: generateClassGraph ? "Class Dependencies" : "Project Dependencies",
-                  hasCycles: false // Will be determined by graph analysis
-                });
-              }
-
-              progress.report({ message: "Complete!", increment: 100 });
-            }
-          );
-
-          statusBarManager.updateDependencyCount(0); // Will be updated by graph provider
-          notificationManager.showInfo("Modern dependency graph generated successfully!");
-
-        } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          notificationManager.showError(`Error generating modern graph: ${errorMessage}`);
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.generate-modern-graph",
+    async () => {
+      try {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+          notificationManager.showError("No workspace folder open");
+          return;
         }
+
+        // Show progress notification
+        await notificationManager.showProgress(
+          "Generating Modern Dependency Graph",
+          async (progress, _token) => {
+            progress.report({ message: "Analyzing project structure..." });
+
+            const config = loadConfiguration();
+            const selectedSolutionFile = await findAndSelectSolutionFile(workspaceFolder, config);
+            
+            if (selectedSolutionFile === null) {
+              return; // User cancelled
+            }
+
+            progress.report({ message: "Selecting graph type...", increment: 20 });
+            const graphType = await selectGraphType();
+            if (!graphType) {
+              return; // User cancelled
+            }
+
+            const generateClassGraph = graphType.label === "Class Dependencies";
+            
+            progress.report({ message: "Generating graph data...", increment: 40 });
+            const dotContent = await generateGraphContent(
+              workspaceFolder,
+              selectedSolutionFile,
+              generateClassGraph,
+              config
+            );
+
+            progress.report({ message: "Opening modern view...", increment: 80 });
+            if (modernGraphProvider) {
+              await modernGraphProvider.showGraph(dotContent, {
+                title: generateClassGraph ? "Class Dependencies" : "Project Dependencies",
+                hasCycles: false // Will be determined by graph analysis
+              });
+            }
+
+            progress.report({ message: "Complete!", increment: 100 });
+          }
+        );
+
+        statusBarManager.updateDependencyCount(0); // Will be updated by graph provider
+        notificationManager.showInfo("Modern dependency graph generated successfully!");
+
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        notificationManager.showError(`Error generating modern graph: ${errorMessage}`);
       }
-    )
+    }
   );
 
   // Register keybinding commands
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.refresh",
-      async () => {
-        if (modernGraphProvider) {
-          await modernGraphProvider.refresh();
-        }
-        notificationManager.showInfo("Graph refreshed");
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.refresh-graph",
+    async () => {
+      if (modernGraphProvider) {
+        await modernGraphProvider.refresh();
       }
-    )
+      notificationManager.showInfo("Graph refreshed");
+    }
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.zoomIn",
-      () => {
-        modernGraphProvider?.postMessage({ command: 'zoomIn' });
-      }
-    )
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.zoom-in",
+    () => {
+      modernGraphProvider?.postMessage({ command: 'zoomIn' });
+    }
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.zoomOut",
-      () => {
-        modernGraphProvider?.postMessage({ command: 'zoomOut' });
-      }
-    )
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.zoom-out",
+    () => {
+      modernGraphProvider?.postMessage({ command: 'zoomOut' });
+    }
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.fitToView",
-      () => {
-        modernGraphProvider?.postMessage({ command: 'fitToView' });
-      }
-    )
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.fit-graph",
+    () => {
+      modernGraphProvider?.postMessage({ command: 'fitToView' });
+    }
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.search",
-      async () => {
-        const searchTerm = await vscode.window.showInputBox({
-          prompt: "Search nodes in dependency graph",
-          placeHolder: "Enter class or project name..."
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.search-nodes",
+    async () => {
+      const searchTerm = await vscode.window.showInputBox({
+        prompt: "Search nodes in dependency graph",
+        placeHolder: "Enter class or project name..."
+      });
+      
+      if (searchTerm) {
+        modernGraphProvider?.postMessage({ 
+          command: 'search', 
+          data: { term: searchTerm }
         });
-        
-        if (searchTerm) {
-          modernGraphProvider?.postMessage({ 
-            command: 'search', 
-            data: { term: searchTerm }
-          });
-        }
       }
-    )
+    }
   );
 
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "dependencyGraph.export",
-      async () => {
-        const format = await vscode.window.showQuickPick([
-          { label: 'SVG', value: 'svg' },
-          { label: 'PNG', value: 'png' },
-          { label: 'DOT', value: 'dot' }
-        ], {
-          placeHolder: "Select export format"
-        });
+  await safeRegisterCommand(
+    context,
+    "vscode-csharp-dependency-graph.export-graph",
+    async () => {
+      const format = await vscode.window.showQuickPick([
+        { label: 'SVG', value: 'svg' },
+        { label: 'PNG', value: 'png' },
+        { label: 'DOT', value: 'dot' }
+      ], {
+        placeHolder: "Select export format"
+      });
 
-        if (format) {
-          modernGraphProvider?.postMessage({ 
-            command: 'export', 
-            data: { format: format.value }
-          });
-        }
+      if (format) {
+        modernGraphProvider?.postMessage({ 
+          command: 'export', 
+          data: { format: format.value }
+        });
       }
-    )
+    }
   );
 }
 
@@ -1272,7 +1356,7 @@ async function getDotFileContent(fileUri?: vscode.Uri): Promise<{ dotFilePath: s
   // If no file URI provided, try to get the active editor's file
   if (!targetFile) {
     const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor && activeEditor.document.fileName.endsWith('.dot')) {
+    if (activeEditor?.document.fileName.endsWith('.dot')) {
       targetFile = activeEditor.document.uri;
     }
   }

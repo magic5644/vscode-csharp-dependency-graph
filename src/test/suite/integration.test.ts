@@ -85,17 +85,15 @@ suite('Modern UI Integration Test Suite', () => {
         // Should create status bar item when updateDependencyCount is called
         assert.ok(createStatusBarItemStub.called);
         
-        // Should register all keybinding commands (9 original + 6 modern = 15 total)
-        assert.strictEqual(registerCommandStub.callCount, 15);
+        // Should register only keybinding commands (3 basic commands)
+        // Modern UI commands are registered separately in extension.ts
+        assert.strictEqual(registerCommandStub.callCount, 3);
         
-        // Verify command names
+        // Verify command names for basic commands only
         const commandNames = registerCommandStub.getCalls().map(call => call.args[0]);
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.openGraph'));
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.refreshGraph'));
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.exportGraph'));
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.searchNodes'));
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.zoomToFit'));
-        assert.ok(commandNames.includes('csharp-dependency-graph.modern.showCycles'));
+        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
+        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.previewGraphviz'));
+        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.analyze-cycles'));
     });
 
     test('should handle notification and status bar integration', () => {

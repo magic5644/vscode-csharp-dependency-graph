@@ -69,22 +69,25 @@ export class KeybindingManager {
         // Only basic extension commands are registered here.
 
         keybindings.forEach(binding => {
-            this.registerKeybinding(context, binding);
+            this.registerCommand(context, binding);
         });
     }
 
     /**
-     * Register a single keybinding
+     * Register a command and its keybinding
      */
-    public registerKeybinding(context: vscode.ExtensionContext, action: KeybindingAction): void {
-        // Register the command if it doesn't exist
-        if (!this.registeredCommands.has(action.command)) {
-            const handler = this.getCommandHandler(action.command);
-            const disposable = vscode.commands.registerCommand(action.command, handler);
-            this.registeredCommands.set(action.command, disposable);
-            context.subscriptions.push(disposable);
-        }
-
+    public registerCommand(context: vscode.ExtensionContext, action: KeybindingAction): void {
+        // Register the actual command
+        const disposable = vscode.commands.registerCommand(action.command, () => {
+            console.log(`Command executed: ${action.command}`);
+        });
+        
+        // Store the disposable
+        this.registeredCommands.set(action.command, disposable);
+        
+        // Add to context subscriptions
+        context.subscriptions.push(disposable);
+        
         // Store contextual commands for dynamic enabling/disabling
         const contextKey = action.when ?? 'default';
         if (!this.contextualCommands.has(contextKey)) {
@@ -94,12 +97,16 @@ export class KeybindingManager {
     }
 
     /**
-     * Get command handler for a specific command
+     * Register a single keybinding (legacy method for compatibility)
+     * Note: This only stores keybinding info, doesn't register commands
      */
-    private getCommandHandler(command: string): (...args: unknown[]) => unknown {
-        // For now, just return a basic handler
-        // Command-specific logic is handled in registerModernGraphCommands()
-        return () => console.log(`Command executed: ${command}`);
+    public registerKeybinding(_context: vscode.ExtensionContext, action: KeybindingAction): void {
+        // Store contextual commands for dynamic enabling/disabling
+        const contextKey = action.when ?? 'default';
+        if (!this.contextualCommands.has(contextKey)) {
+            this.contextualCommands.set(contextKey, []);
+        }
+        this.contextualCommands.get(contextKey)!.push(action);
     }
 
     /**

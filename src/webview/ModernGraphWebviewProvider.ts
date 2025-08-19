@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { NotificationManager } from './notifications/NotificationManager';
-import { StatusBarManager } from './statusbar/StatusBarManager';
-import { KeybindingManager } from './commands/KeybindingManager';
+import { NotificationManager } from '../notifications/NotificationManager';
+import { StatusBarManager } from '../statusbar/StatusBarManager';
+import { KeybindingManager } from '../commands/KeybindingManager';
 
 interface WebviewMessage {
     command: string;
@@ -52,13 +52,11 @@ interface GraphData {
         nodeCount: number;
         edgeCount: number;
         cycleCount: number;
-        hasCycles: boolean;
-        largestComponent: number;
     };
 }
 
 export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'dependencyGraph.modernView';
+    public static readonly viewType = 'csharp-dependency-graph.modernGraphView';
     
     private _view?: vscode.WebviewView;
     private _currentGraphData?: GraphData;
@@ -133,19 +131,94 @@ export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Opens the graph view for a specific file
+     * Opens the graph view for a specific file or generates a graph from the current workspace
      */
-    public async openGraphView(fileUri: vscode.Uri): Promise<void> {
-        // Show notification that graph view is opening
-        this._notificationManager.showInfo(`Opening graph view for: ${path.basename(fileUri.fsPath)}`);
+    public async openGraphView(fileUri?: vscode.Uri): Promise<void> {
+        if (fileUri) {
+            await this._handleFileGraphView(fileUri);
+        } else {
+            await this._handleWorkspaceGraphView();
+        }
         
-        // If view is not yet visible, focus on it
+        // Show the view and set context
+        this._showView();
+        await vscode.commands.executeCommand('setContext', 'vscode-csharp-dependency-graph.graphViewActive', true);
+    }
+
+    /**
+     * Handles opening graph view for a specific file
+     */
+    private async _handleFileGraphView(fileUri: vscode.Uri): Promise<void> {
+        const fileName = path.basename(fileUri.fsPath);
+        this._notificationManager.showInfo(`Opening graph view for: ${fileName}`);
+        
+        if (this._isDotFile(fileUri.fsPath)) {
+            await this._loadDotFile(fileUri, fileName);
+        } else {
+            this._notificationManager.showInfo('Graph view opened. Generate a dependency graph to visualize relationships.');
+        }
+    }
+
+    /**
+     * Handles opening graph view for the workspace
+     */
+    private async _handleWorkspaceGraphView(): Promise<void> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            this._notificationManager.showInfo('Graph view opened. Open a workspace and generate a dependency graph to get started.');
+            return;
+        }
+
+        this._notificationManager.showInfo('Generating dependency graph for workspace...');
+        try {
+            await vscode.commands.executeCommand('vscode-csharp-dependency-graph.generate-modern-graph');
+        } catch (error) {
+            console.warn('Auto-generate failed:', error);
+            this._notificationManager.showWarning('Could not auto-generate graph. Use the "Generate Modern Graph" command.');
+        }
+    }
+
+    /**
+     * Shows the view if available
+     */
+    private _showView(): void {
         if (this._view) {
             this._view.show(true);
         }
-        
-        // Set context for keybindings
-        await vscode.commands.executeCommand('setContext', 'vscode-csharp-dependency-graph.graphViewActive', true);
+    }
+
+    /**
+     * Checks if the file is a DOT file
+     */
+    private _isDotFile(filePath: string): boolean {
+        return filePath.endsWith('.dot') || filePath.endsWith('.gv');
+    }
+
+    /**
+     * Loads and displays a DOT file
+     */
+    private async _loadDotFile(fileUri: vscode.Uri, fileName: string): Promise<void> {
+        try {
+            const dotContent = await vscode.workspace.fs.readFile(fileUri);
+            const content = Buffer.from(dotContent).toString('utf8');
+            
+            await this.showGraph(content, {
+                title: `Graph: ${fileName}`,
+                hasCycles: this._detectCyclesInDotContent(content)
+            });
+        } catch (error) {
+            this._notificationManager.showError(
+                'Failed to read graph file',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+    }
+
+    /**
+     * Simple cycle detection in DOT content
+     */
+    private _detectCyclesInDotContent(content: string): boolean {
+        return content.includes('color="#FF') || content.includes('penwidth="2');
     }
 
     /**
@@ -192,26 +265,10 @@ export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
         const edgeMatches = dotContent.match(/"\w+(?:\.\w+)*"\s*->\s*"\w+(?:\.\w+)*"/g) || [];
         const cycleMatches = dotContent.match(/color="#?[Ff][Ff][0-9A-Fa-f]{4}"|penwidth="?[2-9]\.?\d*"?/g) || [];
         
-        const nodeCount = nodeMatches.length;
-        const edgeCount = edgeMatches.length;
-        const cycleCount = Math.floor(cycleMatches.length / 2); // Rough estimate
-        const hasCycles = cycleCount > 0;
-        
-        // For largest component, we'll use a simple heuristic - 
-        // assume it's the total node count if there are edges, or 1 if no edges
-        let largestComponent = 0;
-        if (edgeCount > 0) {
-            largestComponent = nodeCount;
-        } else if (nodeCount > 0) {
-            largestComponent = 1;
-        }
-        
         return {
-            nodeCount,
-            edgeCount,
-            cycleCount,
-            hasCycles,
-            largestComponent
+            nodeCount: nodeMatches.length,
+            edgeCount: edgeMatches.length,
+            cycleCount: Math.floor(cycleMatches.length / 2) // Rough estimate
         };
     }
 
@@ -311,9 +368,6 @@ export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
                 });
                 
                 this._notificationManager.showInfo(`Exporting graph as ${data.format.toUpperCase()}...`);
-            } else {
-                // Show info message even if dialog was canceled
-                this._notificationManager.showInfo('Export canceled by user');
             }
         } catch (error) {
             this._notificationManager.showError(
@@ -365,19 +419,10 @@ export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
         
         // Update graph metadata
         if (this._currentGraphData) {
-            let largestComponent = 0;
-            if (data.edges > 0) {
-                largestComponent = data.nodes;
-            } else if (data.nodes > 0) {
-                largestComponent = 1;
-            }
-            
             this._currentGraphData.metadata = {
                 nodeCount: data.nodes,
                 edgeCount: data.edges,
-                cycleCount: data.cycles,
-                hasCycles: data.cycles > 0,
-                largestComponent
+                cycleCount: data.cycles
             };
         }
     }

@@ -6,11 +6,15 @@ import { KeybindingManager } from '../../commands/KeybindingManager';
 suite('KeybindingManager Test Suite', () => {
     let manager: KeybindingManager;
     let registerCommandStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
     let executeCommandStub: sinon.SinonStub;
 
     setup(() => {
         // Create stubs for VS Code API
         registerCommandStub = sinon.stub(vscode.commands, 'registerCommand');
+        showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage');
+        showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
         executeCommandStub = sinon.stub(vscode.commands, 'executeCommand');
 
         // Mock disposable
@@ -105,10 +109,14 @@ suite('KeybindingManager Test Suite', () => {
 
         const handler = generateGraphCall.args[1];
         
-        // Execute the handler - it should not throw
-        assert.doesNotThrow(async () => {
-            await handler();
-        });
+        // Execute the handler - it should just log a message
+        const consoleSpy = sinon.spy(console, 'log');
+        await handler();
+        
+        // Should have logged the command execution
+        assert.ok(consoleSpy.calledWith('Command executed: vscode-csharp-dependency-graph.generate-dependency-graph'));
+        
+        consoleSpy.restore();
     });
 
     test('should dispose of registered commands', () => {

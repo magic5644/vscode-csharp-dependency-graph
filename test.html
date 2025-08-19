@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modern Graph Webview</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Intègre ici ton fichier CSS complet, ou référence-le en externe */
+    /* (Copie-colle ici le CSS fourni ou ajoute <link rel="stylesheet" href="tonstyle.css">) */
+  </style>
+</head>
+<body>
+  <div class="modern-graph-container">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="toolbar-btn">🔍 Zoom</button>
+        <button class="toolbar-btn">🎯 Centrer</button>
+        <div class="toolbar-separator"></div>
+        <button class="toolbar-btn toggle-btn active">📌 Verrouiller</button>
+      </div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn">
+          ⚙️ Paramètres
+          <span class="badge">3</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div class="content-area">
+      <!-- Graph -->
+      <div class="graph-container">
+        <div class="graph-canvas">
+          <svg>
+            <circle cx="100" cy="100" r="30" class="node" fill="steelblue" />
+            <circle cx="200" cy="200" r="30" class="node highlighted" fill="tomato" />
+            <line x1="100" y1="100" x2="200" y2="200" class="edge" stroke="gray" stroke-width="2" />
+          </svg>
+        </div>
+        <div class="loading-overlay hidden">
+          <div class="loading-spinner">⏳</div>
+          <div>Chargement du graphe...</div>
+        </div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="side-panel">
+        <div class="panel-header">
+          <h3>Détails du nœud</h3>
+          <button class="close-btn">✖</button>
+        </div>
+        <div class="node-details">
+          <p>Aucun nœud sélectionné.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-group">
+        <div class="status-item">🟢 En ligne</div>
+        <div class="status-item">Graphes : 12</div>
+      </div>
+      <div class="status-group">
+        <div class="status-item">Temps de rendu : 0.25s</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -195,14 +195,20 @@
           "default": true,
           "markdownDescription": "(beta) Open automatically the new Graphviz preview on graphviz file"
         },
-        "csharpDependencyGraph.detectCyclicDependencies": {
+        "csharpDependencyGraph.useModernViewForDotFiles": {
           "order": 8,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use modern graph view instead of traditional preview when opening .dot files automatically"
+        },
+        "csharpDependencyGraph.detectCyclicDependencies": {
+          "order": 9,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Automatically detect and highlight cyclic dependencies in generated graphs"
         },
         "csharpDependencyGraph.testProjectPatterns": {
-          "order": 9,
+          "order": 10,
           "type": "array",
           "default": [
             "*Test*",
@@ -212,7 +218,7 @@
           "markdownDescription": "Glob patterns to identify test projects to exclude"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
-          "order": 10,
+          "order": 11,
           "type": "array",
           "default": [
             "**/obj/**",
@@ -223,7 +229,7 @@
           "markdownDescription": "Glob patterns for source files to exclude from class dependency analysis"
         },
         "csharpDependencyGraph.modernUI.enabled": {
-          "order": 11,
+          "order": 12,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Enable modern interactive UI for dependency graphs with enhanced visualization and controls"
@@ -289,7 +295,7 @@
         {
           "id": "csharp-dependency-graph.modernGraphView",
           "name": "Dependency Graph",
-          "when": "csharp-dependency-graph.hasGraph",
+          "when": "true",
           "icon": "$(graph)"
         }
       ]
@@ -308,6 +314,12 @@
       ],
       "explorer/context": [
         {
+          "icon": "$(graph)",
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.open-modern-graph",
+          "group": "7_dependency-graph@0"
+        },
+        {
           "icon": "$(graph-line)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
           "command": "vscode-csharp-dependency-graph.analyze-cycles",
@@ -321,6 +333,12 @@
         }
       ],
       "editor/context": [
+        {
+          "icon": "$(graph)",
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.open-modern-graph",
+          "group": "7_dependency-graph@0"
+        },
         {
           "icon": "$(graph-line)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
@@ -357,35 +375,35 @@
     "test:check-markdown": "ts-node scripts/markdownSecurityChecker.ts ./test-workspace"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
+    "@types/glob": "^9.0.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.1.0",
     "@types/sinon": "^17.0.4",
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.102.0",
     "@types/xml2js": "^0.4.14",
-    "@typescript-eslint/eslint-plugin": "^6.18.1",
-    "@typescript-eslint/parser": "^6.18.1",
-    "@vscode/test-cli": "^0.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "copy-webpack-plugin": "^13.0.0",
     "css-loader": "^7.1.2",
-    "eslint": "^8.56.0",
-    "glob": "^11.0.2",
-    "mocha": "^11.2.2",
+    "eslint": "^9.32.0",
+    "glob": "^11.0.3",
+    "mocha": "^11.7.1",
     "rimraf": "^6.0.1",
-    "sinon": "^20.0.0",
+    "sinon": "^21.0.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2",
-    "webpack": "^5.98.0",
+    "typescript": "^5.8.3",
+    "webpack": "^5.100.2",
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@hpcc-js/wasm": "^2.22.4",
+    "@hpcc-js/wasm": "^2.25.0",
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
-    "minimatch": "^10.0.1",
+    "minimatch": "^10.0.3",
     "xml2js": "^0.6.2"
   }
 }

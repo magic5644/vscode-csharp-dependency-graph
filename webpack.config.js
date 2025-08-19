@@ -108,7 +108,8 @@ const webviewConfig = {
 const modernWebviewConfig = {
   target: 'web',
   entry: {
-    'simple-graph': './src/webview/simple-graph.ts'
+    'simple-graph': './src/webview/simple-graph.ts',
+    'modern-graph': './src/webview/modern-graph.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),

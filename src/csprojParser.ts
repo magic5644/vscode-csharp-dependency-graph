@@ -91,10 +91,13 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
 function extractTargetFramework(result: CsprojXml, targetFramework: string): string {
   if (result.Project.PropertyGroup && Array.isArray(result.Project.PropertyGroup)) {
     for (const group of result.Project.PropertyGroup) {
+      // Check for modern TargetFramework
       if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
         targetFramework = String(group.TargetFramework[0]);
         break;
-      } else if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
+      }
+      // Check for multi-target TargetFrameworks
+      else if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
         // Use first of multiple target frameworks
         const frameworks = String(group.TargetFrameworks[0]).split(';');
         if (frameworks.length > 0) {
@@ -102,9 +105,16 @@ function extractTargetFramework(result: CsprojXml, targetFramework: string): str
         }
         break;
       }
+      // Check for legacy TargetFrameworkVersion
+      else if (group.TargetFrameworkVersion && Array.isArray(group.TargetFrameworkVersion) && group.TargetFrameworkVersion.length > 0) {
+        targetFramework = String(group.TargetFrameworkVersion[0]);
+        break;
+      }
     }
   }
-  return targetFramework;
+  
+  // Return 'unknown' if no framework was found
+  return targetFramework || 'unknown';
 }
 
 function extractProjectReferences(result: CsprojXml, dependencies: string[], packageDependencies: PackageReference[]): void {
@@ -152,7 +162,7 @@ function addPackageReferencesFromGroup(group: ItemGroup, packageDependencies: Pa
 
   for (const reference of packageRefs) {
     const packageName = reference?.$.Include;
-    const packageVersion = reference?.$.Version || 'unknown';
+    const packageVersion = reference?.$.Version || '';
     
     if (packageName) {
       packageDependencies.push({

@@ -42,9 +42,8 @@ export class NotificationManager {
     public static resetInstance(): void {
         if (NotificationManager.instance) {
             NotificationManager.instance.dispose();
-            // @ts-expect-error - Reset for testing purposes
-            NotificationManager.instance = undefined;
         }
+        NotificationManager.instance = null!;
     }
 
     /**
