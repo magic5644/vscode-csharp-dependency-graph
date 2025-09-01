@@ -42,7 +42,7 @@ export function isValidDotGraph(content: string): boolean {
  * @returns Sanitized string
  */
 export function sanitizeStringValue(value: string): string {
-  if (!value) return value;
+  if (!value) {return value;}
   
   // Process quotes first to avoid regex issues
   let result = value.replace(/'/g, '&#39;').replace(/"/g, '&quot;');

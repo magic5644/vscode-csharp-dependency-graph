@@ -79,7 +79,7 @@ export class GraphPreviewProvider {
    * Handle scenario where panel already exists
    */
   private _handleExistingPanel(title: string, dotContent: string): void {
-    if (!this._panel) return;
+    if (!this._panel) {return;}
 
     this._panel.reveal();
     this._panel.title = title;

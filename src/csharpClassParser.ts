@@ -142,7 +142,7 @@ function processClassLine(
   // Extract the class name - Limit the class name length
   const classNameRegex = /\bclass\s+(\w{1,60})/;
   const classNameMatch = classNameRegex.exec(line);
-  if (!classNameMatch) return null;
+  if (!classNameMatch) {return null;}
   
   const className = classNameMatch[1];
   const dependencies: DependencyInfo[] = [];
@@ -152,11 +152,11 @@ function processClassLine(
   
   // Find the index of the beginning of the class
   const classIndex = content.indexOf(line);
-  if (classIndex < 0) return null;
+  if (classIndex < 0) {return null;}
   
   // Extract the class body
   const classContent = getClassBody(content, classIndex);
-  if (!classContent) return null;
+  if (!classContent) {return null;}
   
   // Extract dependencies from class content
   extractDependenciesFromClassContent(classContent, dependencies);
@@ -334,7 +334,7 @@ function extractInheritanceDependencies(line: string, dependencies: DependencyIn
   // Using atomic groups and possessive quantifiers to prevent backtracking
   const inheritanceRegex = /\s*:\s*((?:[\w<>.]+(?:\s*,\s*[\w<>.]+)*))(?=\s*\{|$)/;
   const inheritanceMatch = inheritanceRegex.exec(line);
-  if (!inheritanceMatch) return;
+  if (!inheritanceMatch) {return;}
   
   const inheritanceStr = inheritanceMatch[1];
   // Handle commas in generic arguments properly
@@ -448,7 +448,7 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
   
   for (const line of lines) {
     // Skip comments
-    if (line.trim().startsWith('//')) continue;
+    if (line.trim().startsWith('//')) {continue;}
     
     processVariableDeclaration(line, dependencies);
     processMethodSignature(line, dependencies);
@@ -585,7 +585,7 @@ function getClassBody(content: string, startIndex: number): string | null {
     }
   }
   
-  if (startPos === -1) return null;
+  if (startPos === -1) {return null;}
   
   // Then find the matching closing brace
   for (let i = startPos + 1; i < content.length; i++) {

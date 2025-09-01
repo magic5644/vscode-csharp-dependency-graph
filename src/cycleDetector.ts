@@ -294,7 +294,7 @@ function handleBacktracking(stack: Array<{
     inPath: Set<string>;
 }>): void {
     const current = stack.pop();
-    if (!current) return;
+    if (!current) {return;}
     
     if (stack.length > 0) {
         // Remove the current node from the path in the parent frame
