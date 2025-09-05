@@ -1,3 +1,7 @@
+# Exclure les fichiers de documentation de développement
+DEBUGGING.md
+ESLINT_MIGRATION.md
+
 # Development folders
 .vscode/**
 .vscode-test/**
@@ -15,7 +19,7 @@ Assets/**
 # Build files
 .gitignore
 tsconfig.json
-webpack.config.js
+webpack.config*.js
 package-lock.json
 .eslintrc.js
 *.vsix

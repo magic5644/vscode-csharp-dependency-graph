@@ -2,13 +2,13 @@
   "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph Generator",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "magic5644",
   "author": {
     "name": "Gildas Le Bournault"
   },
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.102.0"
   },
   "categories": [
     "Visualization",
@@ -355,6 +355,7 @@
     }
   },
   "scripts": {
+    "validate-vsix": "vsce ls --tree && echo 'VSIX structure validated'",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
@@ -381,8 +382,8 @@
     "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.102.0",
     "@types/xml2js": "^0.4.14",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
-    "@typescript-eslint/parser": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
     "copy-webpack-plugin": "^13.0.0",

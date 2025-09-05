@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.7.0] - 2025-09-05
+- **Added** New setting to toggle between curved and straight edges in the graph
+- **Added** New modern theme for the graph with updated colors and styles
+- **Updated** Refactor graph rendering logic for improved performance and responsiveness
+
 ## [0.6.9] - 2025-04-25
 
 - **Added** Analyze cycles in the dependency graph (beta)

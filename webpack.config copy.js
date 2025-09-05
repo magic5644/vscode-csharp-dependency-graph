@@ -1,13 +1,11 @@
 //@ts-check
+/* eslint-disable @typescript-eslint/no-var-requires */
 'use strict';
 
 const path = require('path');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-/**
- * Main extension configuration
- * Bundles the TypeScript extension code for Node.js environment
- */
+// Main extension configuration
 /** @type {import('webpack').Configuration} */
 const extensionConfig = {
   target: 'node',
@@ -16,8 +14,7 @@ const extensionConfig = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
     libraryTarget: 'commonjs2',
-    devtoolModuleFilenameTemplate: '../[resource-path]',
-    clean: true // Clean dist folder before build
+    devtoolModuleFilenameTemplate: '../[resource-path]'
   },
   devtool: 'source-map',
   externals: {
@@ -37,8 +34,7 @@ const extensionConfig = {
             loader: 'ts-loader',
             options: {
               compilerOptions: {
-                module: 'CommonJS',
-                sourceMap: true
+                module: 'CommonJS'
               }
             }
           }
@@ -53,23 +49,21 @@ const extensionConfig = {
           from: 'resources', 
           to: 'resources',
           globOptions: {
-            ignore: ['**/.DS_Store', '**/Thumbs.db']
-          },
-          noErrorOnMissing: true
+            ignore: ['**/.DS_Store']
+          }
         },
         {
           from: 'resources/js',
           to: 'resources/js',
           force: true,
           globOptions: {
-            ignore: ['**/.DS_Store', '**/Thumbs.db']
-          },
-          noErrorOnMissing: true
+            ignore: ['**/.DS_Store']
+          }
         }
       ]
     })
   ],
-  mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',
+  mode: 'production',
   stats: {
     warnings: false
   },
@@ -77,14 +71,11 @@ const extensionConfig = {
     level: 'log'
   },
   optimization: {
-    minimize: process.env.NODE_ENV !== 'development'
+    minimize: true
   }
 };
 
-/**
- * Webview scripts configuration for legacy support
- * Bundles JavaScript for webview consumption
- */
+// Webview scripts configuration
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
   target: 'web',
@@ -106,16 +97,13 @@ const webviewConfig = {
       }
     ]
   },
-  mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',
+  mode: 'production',
   optimization: {
-    minimize: process.env.NODE_ENV !== 'development'
+    minimize: true
   }
 };
 
-/**
- * Modern webview configuration
- * Bundles TypeScript webview components with CSS support
- */
+// Modern webview configuration
 /** @type {import('webpack').Configuration} */
 const modernWebviewConfig = {
   target: 'web',
@@ -161,15 +149,14 @@ const modernWebviewConfig = {
       patterns: [
         {
           from: 'src/webview/modern-graph.css',
-          to: 'modern-graph.css',
-          noErrorOnMissing: true
+          to: 'modern-graph.css'
         }
       ]
     })
   ],
-  mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',
+  mode: 'production',
   optimization: {
-    minimize: process.env.NODE_ENV !== 'development'
+    minimize: true
   }
 };
 
