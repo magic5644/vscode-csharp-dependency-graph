@@ -58,7 +58,7 @@ interface GraphData {
 }
 
 export class ModernGraphWebviewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'dependencyGraph.modernView';
+    public static readonly viewType = 'csharp-dependency-graph.modernGraphView';
     
     private _view?: vscode.WebviewView;
     private _currentGraphData?: GraphData;

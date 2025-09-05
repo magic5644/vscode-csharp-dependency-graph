@@ -43,7 +43,6 @@ interface DependencyGraphConfig {
 
 // Store cycle analysis results for use across commands
 let lastCycleAnalysisResult: CycleAnalysisResult | null = null;
-let _lastDotContent: string | null = null;
 let lastGraphTitle: string | null = null;
 
 // Modern UX managers
@@ -189,13 +188,6 @@ export async function activate(context: vscode.ExtensionContext) {
       console.log('Initialized keybindings');
     } catch (error) {
       console.error('Error initializing keybindings:', error);
-    }
-
-    // Show welcome notification
-    try {
-      await notificationManager.showInfo("C# Dependency Graph extension activated with modern UX!");
-    } catch (error) {
-      console.error('Error showing welcome notification:', error);
     }
 
     console.log('C# Dependency Graph extension activated successfully');
@@ -504,7 +496,7 @@ async function generateAndSaveGraph(
 
       // Store results for later use
       lastCycleAnalysisResult = cycleAnalysisResult;
-      _lastDotContent = dotContent;
+      // Removed unused _lastDotContent assignment
       lastGraphTitle = path.basename(saveUri.fsPath);
 
       // Write the file
@@ -734,7 +726,7 @@ async function generateGraphContent(
 
   // Store results for later use
   lastCycleAnalysisResult = cycleAnalysisResult;
-  _lastDotContent = dotContent;
+  // Removed unused _lastDotContent assignment
   lastGraphTitle = generateClassGraph ? "Class Dependencies" : "Project Dependencies";
 
   return dotContent;
@@ -887,7 +879,7 @@ async function registerGraphvizPreviewCommand(
         const title = path.basename(editor.document.fileName);
         
         // Store content and title for later use (for cycle analysis)
-        _lastDotContent = dotContent;
+        // Removed unused _lastDotContent assignment
         lastGraphTitle = title;
         
         // Analyze cycles in the graph before showing preview
@@ -979,7 +971,7 @@ function setupAutoPreview(
         // Store content and title for later use (for cycle analysis)
         const dotContent = document.getText();
         const title = path.basename(document.fileName);
-        _lastDotContent = dotContent;
+        // Removed unused _lastDotContent assignment
         lastGraphTitle = title;
         
         // Analyze cycles in the graph before showing preview
@@ -1042,7 +1034,7 @@ async function registerCycleAnalysisCommands(
         }
 
         // Store content and title for later use
-        _lastDotContent = dotContent;
+        // Removed unused _lastDotContent assignment
         lastGraphTitle = path.basename(dotFilePath);
 
         // Start progress indicator
@@ -1423,7 +1415,7 @@ export function deactivate(): void {
 
     // Clear global variables
     lastCycleAnalysisResult = null;
-    _lastDotContent = null;
+    // Removed unused _lastDotContent assignment
     lastGraphTitle = null;
 
     console.log('C# Dependency Graph extension deactivated successfully');

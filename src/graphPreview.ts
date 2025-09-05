@@ -42,7 +42,6 @@ export class GraphPreviewProvider {
   private _panel: vscode.WebviewPanel | undefined;
   private readonly _extensionUri: vscode.Uri;
   private _sourceFilePath: string | undefined;
-  private _dotContent: string = "";
   private _cyclesOnlyDotContent: string | undefined;
   private _hasCycles: boolean = false;
 
@@ -64,7 +63,6 @@ export class GraphPreviewProvider {
     cyclesOnlyDotContent?: string
   ): void {
     this._sourceFilePath = sourceFilePath;
-    this._dotContent = dotContent;
     this._cyclesOnlyDotContent = cyclesOnlyDotContent;
     this._hasCycles = !!cyclesOnlyDotContent; // If there is content for cycles-only, then there are cycles
 
@@ -257,7 +255,7 @@ export class GraphPreviewProvider {
         vscode.Uri.joinPath(distResourcesPath, "graphviz.umd.js")
       );
       wasmFolderUri = this._panel.webview.asWebviewUri(distResourcesPath);
-    } catch (error) {
+    } catch (_error) {
       // Fallback to development resources
       console.log("Falling back to development resources in resources/js");
       d3Uri = this._panel.webview.asWebviewUri(
@@ -347,7 +345,7 @@ export class GraphPreviewProvider {
           foundDevResources++;
           console.log(`✅ Development: ${path.fsPath} exists`);
         }
-      } catch (error) {
+      } catch (_error) {
         if (i < 4) {
           console.log(`❌ Production: ${path.fsPath} does not exist`);
         } else {

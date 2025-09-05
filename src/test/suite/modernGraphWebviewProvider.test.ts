@@ -10,7 +10,6 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     let mockWebviewView: vscode.WebviewView;
     let mockWebview: vscode.Webview;
     let notificationManager: NotificationManager;
-    let createWebviewPanelStub: sinon.SinonStub;
     let showErrorMessageStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
 
@@ -50,7 +49,6 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
         } as unknown as vscode.ExtensionContext;
 
         // Create stubs for VS Code API
-        createWebviewPanelStub = sinon.stub(vscode.window, 'createWebviewPanel');
         showErrorMessageStub = sinon.stub(vscode.window, 'showErrorMessage');
         showInformationMessageStub = sinon.stub(vscode.window, 'showInformationMessage');
 

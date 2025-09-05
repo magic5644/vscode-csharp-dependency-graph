@@ -34,7 +34,7 @@ export class KeybindingManager {
      */
     public async initialize(context?: vscode.ExtensionContext): Promise<void> {
         if (context) {
-            this.registerDefaultKeybindings(context);
+            await this.registerDefaultKeybindings(context);
         }
         // Additional initialization logic if needed
     }
@@ -42,7 +42,7 @@ export class KeybindingManager {
     /**
      * Register default keybindings for the extension
      */
-    public registerDefaultKeybindings(context: vscode.ExtensionContext): void {
+    public async registerDefaultKeybindings(context: vscode.ExtensionContext): Promise<void> {
         const keybindings: KeybindingAction[] = [
             {
                 command: 'vscode-csharp-dependency-graph.generate-dependency-graph',
@@ -68,26 +68,48 @@ export class KeybindingManager {
         // in registerModernGraphCommands() to avoid duplicate registration.
         // Only basic extension commands are registered here.
 
-        keybindings.forEach(binding => {
-            this.registerCommand(context, binding);
-        });
+        for (const binding of keybindings) {
+            await this.registerCommand(context, binding);
+        }
     }
 
     /**
      * Register a command and its keybinding
      */
-    public registerCommand(context: vscode.ExtensionContext, action: KeybindingAction): void {
-        // Register the actual command
-        const disposable = vscode.commands.registerCommand(action.command, () => {
-            console.log(`Command executed: ${action.command}`);
-        });
+    public async registerCommand(context: vscode.ExtensionContext, action: KeybindingAction): Promise<void> {
+        // Check if command already exists to avoid duplicate registration
+        const existingCommands = await vscode.commands.getCommands(true);
+        if (existingCommands.includes(action.command)) {
+            console.log(`Command ${action.command} already exists, skipping registration in KeybindingManager`);
+            // Command already exists - just store the keybinding info for context management
+            this.storeKeybindingInfo(action);
+            return;
+        }
+
+        try {
+            // Register the actual command
+            const disposable = vscode.commands.registerCommand(action.command, () => {
+                console.log(`Command executed via keybinding: ${action.command}`);
+                // Don't call the command recursively - this should not happen for existing commands
+                console.warn(`Command ${action.command} was called but should have been registered elsewhere`);
+            });
+            
+            // Store the disposable
+            this.registeredCommands.set(action.command, disposable);
+            
+            // Add to context subscriptions
+            context.subscriptions.push(disposable);
+        } catch (error) {
+            console.warn(`Failed to register command ${action.command} in KeybindingManager:`, error);
+        }
         
-        // Store the disposable
-        this.registeredCommands.set(action.command, disposable);
-        
-        // Add to context subscriptions
-        context.subscriptions.push(disposable);
-        
+        this.storeKeybindingInfo(action);
+    }
+
+    /**
+     * Store keybinding info for context management without registering commands
+     */
+    private storeKeybindingInfo(action: KeybindingAction): void {
         // Store contextual commands for dynamic enabling/disabling
         const contextKey = action.when ?? 'default';
         if (!this.contextualCommands.has(contextKey)) {
@@ -101,12 +123,7 @@ export class KeybindingManager {
      * Note: This only stores keybinding info, doesn't register commands
      */
     public registerKeybinding(_context: vscode.ExtensionContext, action: KeybindingAction): void {
-        // Store contextual commands for dynamic enabling/disabling
-        const contextKey = action.when ?? 'default';
-        if (!this.contextualCommands.has(contextKey)) {
-            this.contextualCommands.set(contextKey, []);
-        }
-        this.contextualCommands.get(contextKey)!.push(action);
+        this.storeKeybindingInfo(action);
     }
 
     /**

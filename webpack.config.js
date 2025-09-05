@@ -17,7 +17,7 @@ const extensionConfig = {
     filename: 'extension.js',
     libraryTarget: 'commonjs2',
     devtoolModuleFilenameTemplate: '../[resource-path]',
-    clean: true // Clean dist folder before build
+    clean: false // Don't clean - let each config manage its own output
   },
   devtool: 'source-map',
   externals: {
@@ -83,7 +83,7 @@ const extensionConfig = {
 
 /**
  * Webview scripts configuration for legacy support
- * Bundles JavaScript for webview consumption
+ * Bundles TypeScript for webview consumption with proper TypeScript support
  */
 /** @type {import('webpack').Configuration} */
 const webviewConfig = {
@@ -96,10 +96,34 @@ const webviewConfig = {
   },
   resolve: {
     extensions: ['.js'],
-    mainFields: ['browser', 'module', 'main']
+    mainFields: ['browser', 'module', 'main'],
+    fallback: {
+      "path": false,
+      "fs": false,
+      "crypto": false,
+      "vscode": false
+    }
   },
   module: {
     rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              compilerOptions: {
+                module: 'ES2015',
+                target: 'ES2015',
+                sourceMap: true,
+                lib: ['DOM', 'ES2015'],
+                moduleResolution: 'node'
+              }
+            }
+          }
+        ]
+      },
       {
         test: /\.js$/,
         exclude: /node_modules/
@@ -130,7 +154,13 @@ const modernWebviewConfig = {
   },
   resolve: {
     extensions: ['.ts', '.js'],
-    mainFields: ['browser', 'module', 'main']
+    mainFields: ['browser', 'module', 'main'],
+    fallback: {
+      "path": false,
+      "fs": false,
+      "crypto": false,
+      "vscode": false
+    }
   },
   module: {
     rules: [
@@ -141,7 +171,14 @@ const modernWebviewConfig = {
           {
             loader: 'ts-loader',
             options: {
-              configFile: path.resolve(__dirname, 'src/webview/tsconfig.webview.json')
+              configFile: path.resolve(__dirname, 'src/webview/tsconfig.webview.json'),
+              compilerOptions: {
+                module: 'ES2015',
+                target: 'ES2015',
+                sourceMap: true,
+                lib: ['DOM', 'ES2015'],
+                moduleResolution: 'node'
+              }
             }
           }
         ]
