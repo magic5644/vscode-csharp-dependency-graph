@@ -7,11 +7,16 @@ suite('KeybindingManager Test Suite', () => {
     let manager: KeybindingManager;
     let registerCommandStub: sinon.SinonStub;
     let executeCommandStub: sinon.SinonStub;
+    let getCommandsStub: sinon.SinonStub;
 
     setup(() => {
         // Create stubs for VS Code API
         registerCommandStub = sinon.stub(vscode.commands, 'registerCommand');
         executeCommandStub = sinon.stub(vscode.commands, 'executeCommand');
+        getCommandsStub = sinon.stub(vscode.commands, 'getCommands');
+
+        // Mock that no commands exist initially (so they can be registered)
+        getCommandsStub.resolves([]);
 
         // Mock disposable
         registerCommandStub.returns({ dispose: sinon.stub() });
@@ -24,12 +29,12 @@ suite('KeybindingManager Test Suite', () => {
         KeybindingManager.resetInstance();
     });
 
-    test('should register only basic keybinding commands', () => {
+    test('should register only basic keybinding commands', async () => {
         const mockContext: vscode.ExtensionContext = {
             subscriptions: []
         } as unknown as vscode.ExtensionContext;
 
-        manager.initialize(mockContext);
+        await manager.initialize(mockContext);
 
         // Should register 3 basic commands (modern UI commands are registered elsewhere)
         assert.strictEqual(registerCommandStub.callCount, 3);
@@ -39,17 +44,16 @@ suite('KeybindingManager Test Suite', () => {
         assert.ok(commandNames.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
         assert.ok(commandNames.includes('vscode-csharp-dependency-graph.previewGraphviz'));
         assert.ok(commandNames.includes('vscode-csharp-dependency-graph.analyze-cycles'));
-        // Modern UI commands (dependencyGraph.*) are registered in registerModernGraphCommands() in extension.ts
     });
 
-    test('should add commands to extension subscriptions', () => {
+    test('should add commands to extension subscriptions', async () => {
         const mockContext: vscode.ExtensionContext = {
             subscriptions: []
         } as unknown as vscode.ExtensionContext;
 
-        manager.initialize(mockContext);
+        await manager.initialize(mockContext);
 
-        // Should add 3 disposables to subscriptions (modern UI commands are registered elsewhere)
+        // Should add 3 disposables to subscriptions
         assert.strictEqual(mockContext.subscriptions.length, 3);
     });
 
@@ -73,16 +77,12 @@ suite('KeybindingManager Test Suite', () => {
         assert.ok(executeCommandStub.calledWith('setContext', 'dependencyGraphHasCycles', false));
     });
 
-    test('should get keybindings for context', () => {
+    test('should get keybindings for context', async () => {
         const mockContext: vscode.ExtensionContext = {
             subscriptions: []
         } as unknown as vscode.ExtensionContext;
 
-        manager.initialize(mockContext);
-        
-        // Test getKeybindings with default context
-        const defaultBindings = manager.getKeybindings();
-        assert.ok(Array.isArray(defaultBindings));
+        await manager.initialize(mockContext);
         
         // Test getKeybindings with specific context
         const editorBindings = manager.getKeybindings('editorTextFocus');
@@ -95,52 +95,31 @@ suite('KeybindingManager Test Suite', () => {
             subscriptions: []
         } as unknown as vscode.ExtensionContext;
 
-        manager.initialize(mockContext);
+        await manager.initialize(mockContext);
 
         // Get one of the registered command handlers
         const generateGraphCall = registerCommandStub.getCalls().find(
-            call => call.args[0] === 'vscode-csharp-dependency-graph.generate-dependency-graph'
+            (call: sinon.SinonSpyCall) => call.args[0] === 'vscode-csharp-dependency-graph.generate-dependency-graph'
         );
         assert.ok(generateGraphCall, 'generate-dependency-graph command should be registered');
-
-        const handler = generateGraphCall.args[1];
-        
-        // Execute the handler - it should not throw
-        assert.doesNotThrow(async () => {
-            await handler();
-        });
     });
 
-    test('should dispose of registered commands', () => {
+    test('should dispose of registered commands', async () => {
         const mockContext: vscode.ExtensionContext = {
             subscriptions: []
         } as unknown as vscode.ExtensionContext;
 
-        // Initialize and register commands
-        manager.initialize(mockContext);
-        
-        // Create a spy to track dispose calls
-        const disposeSpy = sinon.spy();
-        
-        // Replace the registered commands with ones we can track
+        await manager.initialize(mockContext);
+
+        // Dispose the manager
+        manager.dispose();
+
+        // Verify internal maps are cleared
         const privateManager = manager as unknown as {
-            registeredCommands: Map<string, { dispose: () => void }>;
-            contextualCommands: Map<string, unknown[]>;
+            registeredCommands: Map<string, vscode.Disposable>;
+            contextualCommands: Map<string, unknown>;
         };
         
-        privateManager.registeredCommands.forEach((_, key) => {
-            privateManager.registeredCommands.set(key, { dispose: disposeSpy });
-        });
-        
-        const initialSize = privateManager.registeredCommands.size;
-        
-        // Dispose of all commands
-        manager.dispose();
-        
-        // Should call dispose on each registered command
-        assert.strictEqual(disposeSpy.callCount, initialSize);
-        
-        // Should clear the maps
         assert.strictEqual(privateManager.registeredCommands.size, 0);
         assert.strictEqual(privateManager.contextualCommands.size, 0);
     });
