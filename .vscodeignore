@@ -3,8 +3,18 @@ DEBUGGING.md
 ESLINT_MIGRATION.md
 
 # Development folders
+.husky/**
 .vscode/**
 .vscode-test/**
+.idea/**
+.history/**
+.cache/**
+.turbo/**
+coverage/**
+.nyc_output/**
+tmp/**
+.tmp/**
+.pnpm-store/**
 src/**
 test/**
 test-workspace/**
@@ -22,6 +32,12 @@ tsconfig.json
 webpack.config*.js
 package-lock.json
 .eslintrc.js
+eslint.config.js
+test.html
+.env
+.env.*
+*.log
+.DS_Store
 *.vsix
 
 # Source maps and TypeScript files

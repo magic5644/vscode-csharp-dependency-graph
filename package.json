@@ -355,7 +355,7 @@
     }
   },
   "scripts": {
-    "validate-vsix": "vsce ls --tree && echo 'VSIX structure validated'",
+    "validate-vsix": "npm run package:vsix && vsce ls --tree && echo 'VSIX structure validated'",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
