@@ -57,5 +57,8 @@ out/**
 
 # Keep webpack bundles and essential resources
 !dist/resources/**
-!dist/webviewScripts/**
+!dist/webviewScripts/*.js
 !dist/examples/**
+
+# Re-exclude source maps inside dist (even after negation above)
+dist/**/*.map
