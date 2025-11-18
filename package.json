@@ -367,6 +367,8 @@
     "pretest": "rimraf out && tsc -p . --outDir out",
     "test": "node ./out/src/test/runTest.js",
     "lint": "eslint src",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix && eslint \"src/webviewScripts/*.js\" --fix && eslint \"scripts/**/*.ts\" --fix",
+    "prepare": "husky install",
     "lint-and-test": "npm run lint && npm run test",
     "test-compile": "tsc -p . --outDir out",
     "build:dev": "tsc -p . --outDir out",
@@ -399,7 +401,9 @@
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
     "webpack": "^5.103.0",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10"
   },
   "dependencies": {
     "@hpcc-js/wasm": "^2.28.0",
@@ -407,5 +411,11 @@
     "d3-graphviz": "^5.6.0",
     "minimatch": "^10.1.1",
     "xml2js": "^0.6.2"
+  }
+  ,
+  "lint-staged": {
+    "src/**/*.ts": "eslint --fix",
+    "scripts/**/*.ts": "eslint --fix",
+    "src/webviewScripts/*.js": "eslint --fix"
   }
 }

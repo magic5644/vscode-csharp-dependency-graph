@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+/* eslint-disable no-control-regex -- Intentional: this tool must detect control characters in Markdown */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 // Import glob correctly for v11.0.2
 import { glob } from 'glob';
 
@@ -34,7 +35,7 @@ interface CheckResult {
  */
 export class MarkdownSecurityChecker {
     // Define patterns for malicious characters
-    private static readonly MALICIOUS_CHAR_PATTERNS: MaliciousCharInfo[] = [
+    private static readonly maliciousCharPatterns: MaliciousCharInfo[] = [
         // Zero-width characters
         {
             name: 'Zero-width space',
@@ -115,9 +116,15 @@ export class MarkdownSecurityChecker {
         
         // Variation selectors and language tags - Fixed to only include actual variation selectors
         {
-            name: 'Variation Selectors',
-            regex: /[\uFE00-\uFE0F\uE0100-\uE01EF]/g,
-            description: 'Variation selectors for glyph variants'
+            name: 'Variation Selectors (FE00-FE0F)',
+            regex: /[\uFE00-\uFE0F]/g,
+            description: 'Variation selectors for glyph variants (BMP)'
+        },
+        {
+            name: 'Variation Selectors Supplement (E0100-E01EF)',
+            // Use surrogate pair range: U+E0100–U+E01EF = \uDB40[\uDD00-\uDDEF]
+            regex: /\uDB40[\uDD00-\uDDEF]/g,
+            description: 'Supplementary variation selectors (astral plane)'
         },
         {
             name: 'Language Tag Characters',
@@ -159,12 +166,12 @@ export class MarkdownSecurityChecker {
         };
 
         lines.forEach((line, lineIdx) => {
-            this.MALICIOUS_CHAR_PATTERNS.forEach(charPattern => {
+            this.maliciousCharPatterns.forEach(charPattern => {
                 let match;
                 while ((match = charPattern.regex.exec(line)) !== null) {
                     // Ensure we're not matching regular ASCII visible characters (0x20-0x7E)
-                    const charCode = match[0].charCodeAt(0);
-                    if (!(charCode >= 0x20 && charCode <= 0x7E)) {
+                    const codePoint = match[0].codePointAt(0)!;
+                    if (!(codePoint >= 0x20 && codePoint <= 0x7E)) {
                         result.findings.push({
                             character: match[0],
                             charInfo: charPattern,
@@ -239,7 +246,7 @@ export class MarkdownSecurityChecker {
                 
                 findings.forEach(finding => {
                     const charCode = Array.from(finding.character)
-                        .map(c => `U+${c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`)
+                        .map(c => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
                         .join(' ');
                     
                     report += `| ${finding.position.line} | ${finding.position.column} | ${charCode} |\n`;

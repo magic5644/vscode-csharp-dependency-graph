@@ -4,6 +4,10 @@
   <img src="resources/icon.png" width="128" height="128" alt="C# Dependency Graph Extension Icon">
 </p>
 
+[![pre-commit: husky](https://img.shields.io/badge/precommit-husky-blue?logo=git&logoColor=white)](https://typicode.github.io/husky/#/)
+[![lint-staged enabled](https://img.shields.io/badge/lint--staged-enabled-brightgreen)](https://github.com/okonet/lint-staged)
+[![Auto-fix on commit](https://img.shields.io/badge/auto--fix-on%20commit-2ea44f)](#pre-commit-lint-auto-fix)
+
 Generate interactive dependency graphs for C# projects and classes directly from Visual Studio Code.
 
 ## Recent Changes
@@ -377,6 +381,33 @@ Contributions are welcome! Please feel free to submit a Pull Request.
    ```bash
    npm install
    ```
+
+#### Pre-commit Lint Auto-fix
+
+This repo uses Husky + lint-staged to auto-fix staged files on commit.
+
+1. One-time setup after install:
+
+    ```bash
+    npm run prepare
+    ```
+
+2. Commit as usual; staged files are linted and auto-fixed:
+
+    ```bash
+    git add -A
+    git commit -m "your message"
+    ```
+
+3. Manual runs (optional):
+
+    ```bash
+    npm run lint:fix   # auto-fix across src, scripts, and webview scripts
+    npm run lint       # verification only
+    npm test           # run test suite
+    ```
+
+CI does not auto-fix; it only runs `npm run lint` and `npm test` to validate.
 
 ### Building the Extension
 

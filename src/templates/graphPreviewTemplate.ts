@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 
 /**
  * Interface for graph preview template parameters
@@ -212,7 +212,7 @@ function generateToolbar(hasCycles: boolean): string {
       <button id="resetBtn">Reset View</button>
       <button id="exportBtn">Export SVG</button>
       <button id="resetHighlightBtn">Clear Highlight</button>
-      <button id="toggleCyclesBtn" ${!hasCycles ? 'disabled' : ''}>
+      <button id="toggleCyclesBtn" ${hasCycles ? '' : 'disabled'}>
         Show Cycles Only
         ${hasCycles ? `<span class="cycle-badge" id="cycleBadge"></span>` : ''}
       </button>
@@ -247,14 +247,20 @@ function generateScripts(params: GraphPreviewTemplateParams, nonce: string): str
       window.graphvizUri = '${params.graphvizUri}'; 
       window.d3GraphvizUri = '${params.d3GraphvizUri}';
       
-      // Define global state
+      // Define global state (align keys with webview scripts)
       window.graphPreviewState = {
-        dotContent: ${JSON.stringify(params.dotContent)},
+        // Primary DOT sources
+        normalDotSource: ${JSON.stringify(params.dotContent)},
         dotSource: ${JSON.stringify(params.dotContent)},
         cyclesOnlyDotSource: ${params.cyclesOnlyDotContent ? JSON.stringify(params.cyclesOnlyDotContent) : 'null'},
+        // Flags and runtime state
         hasCycles: ${params.hasCycles},
         currentEngine: 'dot',
+        isShowingCyclesOnly: false,
+        // Back-compat fields (some scripts/tests may read these)
+        dotContent: ${JSON.stringify(params.dotContent)},
         showingCycles: false,
+        // Runtime objects
         graphviz: null,
         wasmFolderUri: '${params.wasmFolderUri}'
       };
