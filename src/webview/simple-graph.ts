@@ -38,7 +38,7 @@ class SimpleGraphViewer {
         addListener('exportBtn', 'click', () => this.exportGraph());
         
         // Message handling
-        window.addEventListener('message', (event: any) => {
+        window.addEventListener('message', (event: MessageEvent) => {
             this.handleMessage(event.data as WebviewMessage);
         });
     }

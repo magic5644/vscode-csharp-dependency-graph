@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as util from 'util';
+import * as fs from 'node:fs';
+import * as util from 'node:util';
 
 const readFile = util.promisify(fs.readFile);
 
@@ -331,12 +331,15 @@ function resolveWithImports(
  * Extract inheritance dependencies from a class declaration line
  */
 function extractInheritanceDependencies(line: string, dependencies: DependencyInfo[]): void {
-  // Using atomic groups and possessive quantifiers to prevent backtracking
-  const inheritanceRegex = /\s*:\s*((?:[\w<>.]+(?:\s*,\s*[\w<>.]+)*))(?=\s*\{|$)/;
-  const inheritanceMatch = inheritanceRegex.exec(line);
-  if (!inheritanceMatch) {return;}
+  // Use simple character class to prevent ReDoS
+  const colonIndex = line.indexOf(':');
+  if (colonIndex === -1) {return;}
   
-  const inheritanceStr = inheritanceMatch[1];
+  const braceIndex = line.indexOf('{', colonIndex);
+  const endIndex = braceIndex === -1 ? line.length : braceIndex;
+  const inheritanceStr = line.substring(colonIndex + 1, endIndex).trim();
+  
+  if (!inheritanceStr) {return;}
   // Handle commas in generic arguments properly
   const parts = splitByTopLevelCommas(inheritanceStr);
   
@@ -399,8 +402,8 @@ function extractDependenciesFromClassContent(
  * Finds instantiations with 'new'
  */
 function findNewInstantiations(content: string, dependencies: DependencyInfo[]) {
-  // Improved regex to handle generic types
-  const newRegex = /new\s+([\w.<>,\s]+?)[({}]/g;
+  // Simplified regex to prevent ReDoS - match type name after 'new'
+  const newRegex = /new\s+([\w.<>,]+?)\s*[({}]/g;
   let match;
   
   while ((match = newRegex.exec(content)) !== null) {
@@ -459,14 +462,12 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
  * Process variable and field declarations in a line
  */
 function processVariableDeclaration(line: string, dependencies: DependencyInfo[]): void {
-  // Handle both fields/variables (ending with = or ;) and properties (ending with { ... })
-  const fieldRegex = /^\s*(?:public|private|protected|internal)?\s*(?:const|readonly|static)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*[=;]/;
-  const propertyRegex = /^\s*(?:public|private|protected|internal)?\s*(?:const|readonly|static)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*\{[^}]*\}/;
+  // Use fixed repetition to prevent ReDoS
+  const fieldRegex = /^\s*(?:\w+\s+){0,3}([\w<>[\],.]+)\s+\w+\s*[=;]/;
+  const propertyRegex = /^\s*(?:\w+\s+){0,3}([\w<>[\],.]+)\s+\w+\s*\{/;
   
   let declMatch = fieldRegex.exec(line);
-  if (!declMatch) {
-    declMatch = propertyRegex.exec(line);
-  }
+  declMatch ??= propertyRegex.exec(line);
   
   if (!declMatch?.[1]) {
     return;
@@ -486,8 +487,8 @@ function processVariableDeclaration(line: string, dependencies: DependencyInfo[]
  * Process method signatures to extract return type and parameters
  */
 function processMethodSignature(line: string, dependencies: DependencyInfo[]): void {
-  // Limit the size of return types to avoid exponential backtracking
-  const methodRegex = /(?:public|private|protected|internal)\s+(?:static\s+|virtual\s+|override\s+|abstract\s+)?([\w<>[\],\s.]+)\s+(\w+)\s*\(([^)]*)\)/;
+  // Use fixed repetition to prevent ReDoS
+  const methodRegex = /\b(?:public|private|protected|internal)\s+(?:\w+\s+){0,2}([\w<>[\],.]+)\s+(\w+)\s*\(([^)]*)\)/;
   
   const methodMatch = methodRegex.exec(line);
   

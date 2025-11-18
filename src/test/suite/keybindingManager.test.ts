@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { KeybindingManager } from '../../commands/KeybindingManager';
@@ -40,10 +40,10 @@ suite('KeybindingManager Test Suite', () => {
         assert.strictEqual(registerCommandStub.callCount, 3);
 
         // Verify specific command registrations from actual implementation
-        const commandNames = registerCommandStub.getCalls().map(call => call.args[0]);
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.previewGraphviz'));
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.analyze-cycles'));
+        const commandNames = new Set(registerCommandStub.getCalls().map(call => call.args[0]));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.generate-dependency-graph'));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.previewGraphviz'));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.analyze-cycles'));
     });
 
     test('should add commands to extension subscriptions', async () => {

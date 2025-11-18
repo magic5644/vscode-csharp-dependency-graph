@@ -152,9 +152,8 @@ export class KeybindingManager {
     /**
      * Get all registered keybindings for a context
      */
-    public getKeybindings(context?: string): KeybindingAction[] {
-        const contextKey = context ?? 'default';
-        return this.contextualCommands.get(contextKey) ?? [];
+    public getKeybindings(context: string = 'default'): KeybindingAction[] {
+        return this.contextualCommands.get(context) ?? [];
     }
 
     /**

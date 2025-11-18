@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as path from "path";
-import * as fs from "fs";
+import * as path from "node:path";
+import * as fs from "node:fs";
 import {
   generateHtmlTemplate,
   GraphPreviewTemplateParams,
@@ -142,10 +142,9 @@ export class GraphPreviewProvider {
     message: WebviewMessageType
   ): Promise<void> {
     if (message.command === "error") {
-      const errorMsg = message as ErrorMessage;
-      vscode.window.showErrorMessage(errorMsg.text);
+      vscode.window.showErrorMessage(message.text);
     } else if (message.command === "exportSvg") {
-      await this._handleExportSvg(message as ExportSvgMessage);
+      await this._handleExportSvg(message);
     }
   }
 
@@ -255,7 +254,7 @@ export class GraphPreviewProvider {
         vscode.Uri.joinPath(distResourcesPath, "graphviz.umd.js")
       );
       wasmFolderUri = this._panel.webview.asWebviewUri(distResourcesPath);
-    } catch (_error) {
+    } catch {
       // Fallback to development resources
       console.log("Falling back to development resources in resources/js");
       d3Uri = this._panel.webview.asWebviewUri(
@@ -345,7 +344,7 @@ export class GraphPreviewProvider {
           foundDevResources++;
           console.log(`✅ Development: ${path.fsPath} exists`);
         }
-      } catch (_error) {
+      } catch {
         if (i < 4) {
           console.log(`❌ Production: ${path.fsPath} does not exist`);
         } else {

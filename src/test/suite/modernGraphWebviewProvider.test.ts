@@ -63,12 +63,12 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
 
     test('should initialize with correct context and notification manager', () => {
         assert.ok(provider);
-        assert.strictEqual((provider as any)._context, mockContext);
-        assert.strictEqual((provider as any)._notificationManager, notificationManager);
+        assert.strictEqual((provider as unknown as { _context: vscode.ExtensionContext })._context, mockContext);
+        assert.strictEqual((provider as unknown as { _notificationManager: NotificationManager })._notificationManager, notificationManager);
     });
 
     test('should resolve webview view with correct HTML content', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
 
         assert.ok(mockWebview.html.includes('Dependency Graph'));
         assert.ok(mockWebview.html.includes('href=') && mockWebview.html.includes('rel="stylesheet"'));
@@ -76,7 +76,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should handle node selection message', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // Get the message handler
         const onDidReceiveMessageStub = mockWebview.onDidReceiveMessage as sinon.SinonStub;
@@ -102,7 +102,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
         const showSaveDialogStub = sinon.stub(vscode.window, 'showSaveDialog');
         showSaveDialogStub.resolves(vscode.Uri.file('/test/export.svg'));
         
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const onDidReceiveMessageStub = mockWebview.onDidReceiveMessage as sinon.SinonStub;
         const messageHandler = onDidReceiveMessageStub.getCall(0).args[0];
@@ -229,7 +229,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
             Class3 -> Class1;
         }`;
         
-        const metadata = (provider as any)._parseGraphMetadata(dotContent);
+        const metadata = (provider as unknown as { _parseGraphMetadata(content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
         
         assert.strictEqual(typeof metadata.nodeCount, 'number');
         assert.strictEqual(typeof metadata.edgeCount, 'number');
@@ -242,7 +242,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
             Class1 -> Class2;
         }`;
         
-        const metadata = (provider as any)._parseGraphMetadata(dotContent);
+        const metadata = (provider as unknown as { _parseGraphMetadata(content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
         
         assert.strictEqual(typeof metadata.nodeCount, 'number');
         assert.strictEqual(typeof metadata.edgeCount, 'number');

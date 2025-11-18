@@ -255,7 +255,7 @@ function findCyclesFromNode(
     });
     
     while (stack.length > 0) {
-        const current = stack[stack.length - 1];
+        const current = stack.at(-1)!;
         
         if (current.index >= current.neighbors.length) {
             // Handle backtracking
@@ -298,9 +298,9 @@ function handleBacktracking(stack: Array<{
     
     if (stack.length > 0) {
         // Remove the current node from the path in the parent frame
-        const path = stack[stack.length - 1].path;
-        const inPath = stack[stack.length - 1].inPath;
-        if (path[path.length - 1] === current.node) {
+        const path = stack.at(-1)!.path;
+        const inPath = stack.at(-1)!.inPath;
+        if (path.at(-1) === current.node) {
             path.pop();
             inPath.delete(current.node);
         }
@@ -338,7 +338,7 @@ function exploreNeighbor(
         inPath: Set<string>;
     }>
 ): void {
-    const current = stack[stack.length - 1];
+    const current = stack.at(-1)!;
     const neighborNeighbors = graph.get(neighbor) || [];
     const newPath = [...current.path, neighbor];
     const newInPath = new Set(current.inPath);

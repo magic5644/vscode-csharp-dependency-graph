@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as path from "path";
-import * as fs from "fs";
+import * as path from "node:path";
+import * as fs from "node:fs";
 import { findCsprojFiles } from "./csprojFinder";
 import { parseCsprojFiles, Project } from "./csprojParser";
 import { generateDotFile } from "./graphGeneratorAdapter";
@@ -61,7 +61,7 @@ let modernGraphProvider: ModernGraphWebviewProvider;
 async function safeRegisterCommand(
   context: vscode.ExtensionContext,
   commandId: string,
-  handler: (...args: any[]) => any
+  handler: (...args: unknown[]) => unknown
 ): Promise<vscode.Disposable | null> {
   try {
     // Check if command already exists
@@ -127,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext) {
     keybindingManager = KeybindingManager.getInstance();
     modernGraphProvider = new ModernGraphWebviewProvider(context.extensionUri, context);
 
-    // Register the webview provider
+    // Register the webview provider and add all disposables
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(
         ModernGraphWebviewProvider.viewType,
@@ -137,11 +137,7 @@ export async function activate(context: vscode.ExtensionContext) {
             retainContextWhenHidden: true
           }
         }
-      )
-    );
-
-    // Add to disposables
-    context.subscriptions.push(
+      ),
       notificationManager,
       statusBarManager,
       keybindingManager,
@@ -1019,7 +1015,8 @@ async function registerCycleAnalysisCommands(
   await safeRegisterCommand(
     context,
     "vscode-csharp-dependency-graph.analyze-cycles",
-    async (fileUri?: vscode.Uri) => {
+    async (...args: unknown[]) => {
+      const fileUri = args[0] as vscode.Uri | undefined;
       try {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
@@ -1072,7 +1069,8 @@ async function registerCycleAnalysisCommands(
   await safeRegisterCommand(
     context,
     "vscode-csharp-dependency-graph.generate-cycle-report",
-    async (fileUri?: vscode.Uri) => {
+    async (...args: unknown[]) => {
+      const fileUri = args[0] as vscode.Uri | undefined;
       try {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) {
@@ -1111,7 +1109,8 @@ async function registerModernGraphCommands(context: vscode.ExtensionContext): Pr
   await safeRegisterCommand(
     context,
     "vscode-csharp-dependency-graph.open-modern-graph",
-    async (fileUri?: vscode.Uri) => {
+    async (...args: unknown[]) => {
+      const fileUri = args[0] as vscode.Uri | undefined;
       try {
         if (modernGraphProvider) {
           if (fileUri) {
@@ -1313,7 +1312,7 @@ async function generateAndShowCycleReport(workspaceFolder: vscode.WorkspaceFolde
     const reportContent = generateCycleReport(lastCycleAnalysisResult);
     
     // Create a unique filename for the report
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-');
     const reportFileName = `dependency-cycle-report-${timestamp}.md`;
     const reportPath = path.join(workspaceFolder.uri.fsPath, reportFileName);
     

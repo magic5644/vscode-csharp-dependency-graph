@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { NotificationManager } from '../../notifications/NotificationManager';
@@ -128,10 +128,10 @@ suite('Modern UI Integration Test Suite', () => {
         assert.strictEqual(registerCommandStub.callCount, 3);
         
         // Verify command names for basic commands only
-        const commandNames = registerCommandStub.getCalls().map(call => call.args[0]);
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.generate-dependency-graph'));
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.previewGraphviz'));
-        assert.ok(commandNames.includes('vscode-csharp-dependency-graph.analyze-cycles'));
+        const commandNames = new Set(registerCommandStub.getCalls().map(call => call.args[0]));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.generate-dependency-graph'));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.previewGraphviz'));
+        assert.ok(commandNames.has('vscode-csharp-dependency-graph.analyze-cycles'));
     });
 
     test('should handle notification and status bar integration', () => {
@@ -334,11 +334,11 @@ suite('Modern UI Integration Test Suite', () => {
         assert.ok(createStatusBarItemStub.callCount >= 2);
         
         // Check dependency count status bar item (should be the last one created since it was updated last)
-        const dependencyItem = mockStatusBarItems[mockStatusBarItems.length - 2]; // Second to last (cycle indicator is last)
+        const dependencyItem = mockStatusBarItems.at(-2)!; // Second to last (cycle indicator is last)
         assert.ok(dependencyItem.text.includes('20'));
         
         // Check cycle indicator status bar item (should be the last one created)
-        const cycleItem = mockStatusBarItems[mockStatusBarItems.length - 1];
+        const cycleItem = mockStatusBarItems.at(-1)!;
         assert.ok(cycleItem.text.includes('cycles'));
     });
 });
