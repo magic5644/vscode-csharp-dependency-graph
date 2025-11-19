@@ -255,7 +255,11 @@ function findCyclesFromNode(
     });
     
     while (stack.length > 0) {
-        const current = stack.at(-1)!;
+        const current = stack.at(-1);
+        if (!current) {
+            // Stack is empty, skip this iteration
+            continue;
+        }
         
         if (current.index >= current.neighbors.length) {
             // Handle backtracking

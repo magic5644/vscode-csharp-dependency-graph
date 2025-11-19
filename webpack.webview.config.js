@@ -11,7 +11,7 @@ const webviewConfig = {
     path: path.resolve(__dirname, 'dist', 'webviewScripts'),
     filename: 'graphPreviewBundle.js',
     libraryTarget: 'window',
-    clean: false  // Ne pas nettoyer le répertoire
+    clean: false
   },
   resolve: {
     extensions: ['.js'],
