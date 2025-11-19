@@ -91,6 +91,82 @@ module.exports = [
     }
   },
 
+  // Configuration for scripts folder
+  {
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: './scripts/tsconfig.json'
+      },
+      globals: {
+        console: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        require: 'readonly',
+        module: 'readonly'
+      }
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin
+    },
+    rules: {
+      '@typescript-eslint/naming-convention': [
+        'error',
+        {
+          selector: 'default',
+          format: ['camelCase'],
+          leadingUnderscore: 'allow'
+        },
+        {
+          selector: 'variable',
+          format: ['camelCase', 'UPPER_CASE'],
+          leadingUnderscore: 'allow'
+        },
+        {
+          selector: 'parameter',
+          format: ['camelCase'],
+          leadingUnderscore: 'allow'
+        },
+        {
+          selector: 'memberLike',
+          modifiers: ['private'],
+          format: ['camelCase'],
+          leadingUnderscore: 'allow'
+        },
+        {
+          selector: 'typeLike',
+          format: ['PascalCase']
+        },
+        {
+          selector: 'interface',
+          format: ['PascalCase']
+        },
+        {
+          selector: 'enumMember',
+          format: ['PascalCase']
+        }
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_'
+      }],
+      'curly': 'warn',
+      'eqeqeq': 'error',
+      'no-throw-literal': 'error',
+      'no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_'
+      }],
+      'semi': 'off'
+    }
+  },
+
   // Configuration for test files
   {
     files: ['src/test/**/*.ts'],
@@ -222,7 +298,10 @@ module.exports = [
       'examples/**',
       'assets/**',
       '.eslintrc.js',
-      'eslint.config.js'
+      'eslint.config.js',
+      'scripts/**/*.js',
+      'scripts/**/*.d.ts',
+      'scripts/**/*.js.map'
     ]
   }
 ];

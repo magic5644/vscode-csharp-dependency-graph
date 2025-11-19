@@ -224,76 +224,79 @@ export class MarkdownSecurityChecker {
         report += `Found ${results.length} file(s) with potential security issues:\n\n`;
 
         results.forEach(result => {
-            report += `## ${path.basename(result.filePath)}\n`;
-            report += `Path: ${result.filePath}\n\n`;
-            report += `Total findings: ${result.findings.length}\n\n`;
-            
-            const groupedByType = result.findings.reduce((acc, finding) => {
-                const type = finding.charInfo.name;
-                if (!acc[type]) {
-                    acc[type] = [];
-                }
-                acc[type].push(finding);
-                return acc;
-            }, {} as Record<string, typeof result.findings>);
-
-            Object.entries(groupedByType).forEach(([type, findings]) => {
-                report += `### ${type} (${findings.length})\n`;
-                report += `${findings[0].charInfo.description}\n\n`;
-                
-                report += '| Line | Column | Character Code |\n';
-                report += '|------|--------|---------------|\n';
-                
-                findings.forEach(finding => {
-                    const charCode = Array.from(finding.character)
-                        .map(c => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
-                        .join(' ');
-                    
-                    report += `| ${finding.position.line} | ${finding.position.column} | ${charCode} |\n`;
-                });
-                
-                report += '\n';
-            });
-            
-            report += '\n';
+            report += this.generateFileReport(result);
         });
 
         return report;
     }
-}
 
-/**
- * Main function to run the script
- */
-async function main() {
-    try {
-        // Get workspace folder from command line arguments or use current directory
-        const workspaceFolder = process.argv[2] || process.cwd();
+    /**
+     * Generate report section for a single file
+     * @param result Check result for a file
+     * @returns Formatted report section
+     */
+    private static generateFileReport(result: CheckResult): string {
+        let report = `## ${path.basename(result.filePath)}\n`;
+        report += `Path: ${result.filePath}\n\n`;
+        report += `Total findings: ${result.findings.length}\n\n`;
         
-        console.log(`Checking Markdown files in ${workspaceFolder} for malicious characters...`);
+        const groupedByType = this.groupFindingsByType(result.findings);
+
+        Object.entries(groupedByType).forEach(([type, findings]) => {
+            report += this.generateTypeSection(type, findings);
+        });
         
-        // Check workspace for malicious characters
-        const results = await MarkdownSecurityChecker.checkWorkspace(workspaceFolder);
-        
-        // Generate and print report
-        const report = MarkdownSecurityChecker.generateReport(results);
-        console.log(report);
-        
-        // Exit with error code if malicious characters were found (for CI/CD integration)
-        if (results.length > 0) {
-            console.error('❌ Malicious characters detected in Markdown files. Exiting with error code 1.');
-            process.exit(1);
-        } else {
-            console.log('✅ No malicious characters detected in Markdown files.');
-            process.exit(0);
-        }
-    } catch (error) {
-        console.error('Error running Markdown security check:', error);
-        process.exit(2);
+        report += '\n';
+        return report;
     }
-}
 
-// Run the script when it's directly executed (not imported)
-if (require.main === module) {
-    main();
+    /**
+     * Group findings by character type
+     * @param findings Array of findings
+     * @returns Findings grouped by type
+     */
+    private static groupFindingsByType(findings: CheckResult['findings']): Record<string, typeof findings> {
+        return findings.reduce((acc, finding) => {
+            const type = finding.charInfo.name;
+            if (!acc[type]) {
+                acc[type] = [];
+            }
+            acc[type].push(finding);
+            return acc;
+        }, {} as Record<string, typeof findings>);
+    }
+
+    /**
+     * Generate report section for a character type
+     * @param type Character type name
+     * @param findings Findings of this type
+     * @returns Formatted type section
+     */
+    private static generateTypeSection(type: string, findings: CheckResult['findings']): string {
+        let section = `### ${type} (${findings.length})\n`;
+        section += `${findings[0].charInfo.description}\n\n`;
+        
+        section += '| Line | Column | Character Code |\n';
+        section += '|------|--------|---------------|\n';
+        
+        findings.forEach(finding => {
+            section += this.generateFindingRow(finding);
+        });
+        
+        section += '\n';
+        return section;
+    }
+
+    /**
+     * Generate table row for a single finding
+     * @param finding Single finding
+     * @returns Formatted table row
+     */
+    private static generateFindingRow(finding: CheckResult['findings'][0]): string {
+        const charCode = Array.from(finding.character)
+            .map(c => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
+            .join(' ');
+        
+        return `| ${finding.position.line} | ${finding.position.column} | ${charCode} |\n`;
+    }
 }

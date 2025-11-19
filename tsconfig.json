@@ -5,7 +5,6 @@
     "outDir": "out",
     "lib": ["ES2022"],
     "sourceMap": true,
-    "rootDirs": ["src", "scripts"],
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -29,6 +28,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", ".vscode-test", "out", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", ".vscode-test", "out", "dist", "scripts"]
 }
