@@ -17,6 +17,7 @@ test-workspace/ProjectB/obj/
 test-workspace/ProjectB/bin/
 test-workspace/ProjectB/Debug/
 test-workspace/ProjectB/Release/
+*.map
 
 # TypeScript incremental compilation cache
 *.tsbuildinfo

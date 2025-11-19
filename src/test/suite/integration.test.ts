@@ -44,7 +44,7 @@ suite('Modern UI Integration Test Suite', () => {
                 get: sinon.stub(),
                 update: sinon.stub()
             }
-        } as any;
+        } as unknown as vscode.ExtensionContext;
 
         // Create stubs for VS Code API
         mockStatusBarItems = [];
@@ -175,9 +175,9 @@ suite('Modern UI Integration Test Suite', () => {
             onDidChangeVisibility: sinon.stub(),
             show: sinon.stub(),
             title: 'Test View'
-        } as any;
+        } as unknown as vscode.WebviewView;
 
-        webviewProvider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        webviewProvider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // Test that webview can trigger notifications
         const onDidReceiveMessageStub = mockWebviewView.webview.onDidReceiveMessage as sinon.SinonStub;
@@ -213,9 +213,9 @@ suite('Modern UI Integration Test Suite', () => {
             onDidChangeVisibility: sinon.stub(),
             show: sinon.stub(),
             title: 'Test View'
-        } as any;
+        } as unknown as vscode.WebviewView;
 
-        webviewProvider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        webviewProvider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // Show graph in webview - this will trigger updateGraph which updates the status bar
         const dotContent = 'digraph G { "Class1" [label="Class1"]; "Class2" [label="Class2"]; "Class3" [label="Class3"]; "Class1" -> "Class2"; "Class2" -> "Class3"; }';
@@ -310,9 +310,9 @@ suite('Modern UI Integration Test Suite', () => {
             onDidChangeVisibility: sinon.stub(),
             show: sinon.stub(),
             title: 'Test View'
-        } as any;
+        } as unknown as vscode.WebviewView;
 
-        webviewProvider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        webviewProvider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // Simulate concurrent operations
         const operations = [

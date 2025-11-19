@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import * as sinon from 'sinon';
 import { ModernGraphWebviewProvider } from '../../ModernGraphWebviewProvider';
@@ -123,7 +123,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should handle search message', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const onDidReceiveMessageStub = mockWebview.onDidReceiveMessage as sinon.SinonStub;
         const messageHandler = onDidReceiveMessageStub.getCall(0).args[0];
@@ -143,7 +143,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should handle unknown message type gracefully', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const onDidReceiveMessageStub = mockWebview.onDidReceiveMessage as sinon.SinonStub;
         const messageHandler = onDidReceiveMessageStub.getCall(0).args[0];
@@ -163,7 +163,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
 
     test('should open graph view with webview panel', async () => {
         // First resolve the webview view
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const testFileUri = vscode.Uri.file('/test/TestClass.cs');
         await provider.openGraphView(testFileUri);
@@ -179,7 +179,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should show graph with content', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const dotContent = 'digraph G { TestClass -> OtherClass; }';
         
@@ -192,7 +192,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should refresh graph', async () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // First set some graph data
         const dotContent = 'digraph G { TestClass -> OtherClass; }';
@@ -210,7 +210,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should post custom message', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         const customMessage = { command: 'customType', data: { test: 'value' } };
         
@@ -229,7 +229,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
             Class3 -> Class1;
         }`;
         
-        const metadata = (provider as unknown as { _parseGraphMetadata(content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
+        const metadata = (provider as unknown as { _parseGraphMetadata(_content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
         
         assert.strictEqual(typeof metadata.nodeCount, 'number');
         assert.strictEqual(typeof metadata.edgeCount, 'number');
@@ -242,7 +242,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
             Class1 -> Class2;
         }`;
         
-        const metadata = (provider as unknown as { _parseGraphMetadata(content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
+        const metadata = (provider as unknown as { _parseGraphMetadata(_content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
         
         assert.strictEqual(typeof metadata.nodeCount, 'number');
         assert.strictEqual(typeof metadata.edgeCount, 'number');
@@ -253,7 +253,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     test('should handle empty graph data', () => {
         const dotContent = 'digraph G { }';
         
-        const metadata = (provider as any)._parseGraphMetadata(dotContent);
+        const metadata = (provider as unknown as { _parseGraphMetadata(_content: string): { nodeCount: number; edgeCount: number; hasCycles: boolean; largestComponent: number } })._parseGraphMetadata(dotContent);
         
         assert.strictEqual(typeof metadata.nodeCount, 'number');
         assert.strictEqual(typeof metadata.edgeCount, 'number');
@@ -272,7 +272,7 @@ suite('ModernGraphWebviewProvider Test Suite', () => {
     });
 
     test('should generate correct webview URI for resources', () => {
-        provider.resolveWebviewView(mockWebviewView, null as any, null as any);
+        provider.resolveWebviewView(mockWebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
         
         // Check that asWebviewUri was called for CSS and JS files
         const asWebviewUriStub = mockWebview.asWebviewUri as sinon.SinonStub;
