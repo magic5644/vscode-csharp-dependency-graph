@@ -2,13 +2,13 @@
   "name": "vscode-csharp-dependency-graph",
   "displayName": "C# Dependency Graph Generator",
   "description": "Generate dependency graphs for C# projects - Helps visualize project dependencies or classes dependencies in a .NET solution.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "magic5644",
   "author": {
     "name": "Gildas Le Bournault"
   },
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.106.0"
   },
   "categories": [
     "Visualization",
@@ -53,6 +53,92 @@
       {
         "command": "vscode-csharp-dependency-graph.generate-cycle-report",
         "title": "C#: Generate Dependency Cycle Report"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.open-modern-graph",
+        "title": "C#: Open Modern Dependency Graph",
+        "category": "C# Dependency Graph",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.refresh-graph",
+        "title": "Refresh Graph",
+        "category": "C# Dependency Graph",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.search-nodes",
+        "title": "Search Nodes",
+        "category": "C# Dependency Graph",
+        "icon": "$(search)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.export-graph",
+        "title": "Export Graph",
+        "category": "C# Dependency Graph",
+        "icon": "$(export)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.zoom-in",
+        "title": "Zoom In",
+        "category": "C# Dependency Graph",
+        "icon": "$(zoom-in)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.zoom-out",
+        "title": "Zoom Out",
+        "category": "C# Dependency Graph",
+        "icon": "$(zoom-out)"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.fit-graph",
+        "title": "Fit Graph to View",
+        "category": "C# Dependency Graph",
+        "icon": "$(screen-full)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vscode-csharp-dependency-graph.open-modern-graph",
+        "key": "ctrl+shift+d ctrl+shift+o",
+        "mac": "cmd+shift+d cmd+shift+o",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.refresh-graph",
+        "key": "ctrl+shift+d ctrl+shift+r",
+        "mac": "cmd+shift+d cmd+shift+r",
+        "when": "csharp-dependency-graph.webviewFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.search-nodes",
+        "key": "ctrl+shift+d ctrl+shift+f",
+        "mac": "cmd+shift+d cmd+shift+f",
+        "when": "csharp-dependency-graph.webviewFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.export-graph",
+        "key": "ctrl+shift+d ctrl+shift+e",
+        "mac": "cmd+shift+d cmd+shift+e",
+        "when": "csharp-dependency-graph.webviewFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.zoom-in",
+        "key": "ctrl+shift+d ctrl+shift+=",
+        "mac": "cmd+shift+d cmd+shift+=",
+        "when": "csharp-dependency-graph.webviewFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.zoom-out",
+        "key": "ctrl+shift+d ctrl+shift+-",
+        "mac": "cmd+shift+d cmd+shift+-",
+        "when": "csharp-dependency-graph.webviewFocus"
+      },
+      {
+        "command": "vscode-csharp-dependency-graph.fit-graph",
+        "key": "ctrl+shift+d ctrl+shift+0",
+        "mac": "cmd+shift+d cmd+shift+0",
+        "when": "csharp-dependency-graph.webviewFocus"
       }
     ],
     "configuration": {
@@ -109,14 +195,20 @@
           "default": true,
           "markdownDescription": "(beta) Open automatically the new Graphviz preview on graphviz file"
         },
-        "csharpDependencyGraph.detectCyclicDependencies": {
+        "csharpDependencyGraph.useModernViewForDotFiles": {
           "order": 8,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Use modern graph view instead of traditional preview when opening .dot files automatically"
+        },
+        "csharpDependencyGraph.detectCyclicDependencies": {
+          "order": 9,
           "type": "boolean",
           "default": true,
           "markdownDescription": "Automatically detect and highlight cyclic dependencies in generated graphs"
         },
         "csharpDependencyGraph.testProjectPatterns": {
-          "order": 9,
+          "order": 10,
           "type": "array",
           "default": [
             "*Test*",
@@ -126,7 +218,7 @@
           "markdownDescription": "Glob patterns to identify test projects to exclude"
         },
         "csharpDependencyGraph.excludeSourcePatterns": {
-          "order": 10,
+          "order": 11,
           "type": "array",
           "default": [
             "**/obj/**",
@@ -135,6 +227,44 @@
             "**/node_modules/**"
           ],
           "markdownDescription": "Glob patterns for source files to exclude from class dependency analysis"
+        },
+        "csharpDependencyGraph.modernUI.enabled": {
+          "order": 12,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable modern interactive UI for dependency graphs with enhanced visualization and controls"
+        },
+        "csharpDependencyGraph.modernUI.notifications.enabled": {
+          "order": 12,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable intelligent notification system with progress tracking and smart queueing"
+        },
+        "csharpDependencyGraph.modernUI.notifications.cooldownPeriod": {
+          "order": 13,
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "markdownDescription": "Cooldown period in milliseconds between similar notifications to prevent spam"
+        },
+        "csharpDependencyGraph.modernUI.statusBar.enabled": {
+          "order": 14,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show dependency count and cycle indicators in the status bar"
+        },
+        "csharpDependencyGraph.modernUI.keybindings.enabled": {
+          "order": 15,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable custom keyboard shortcuts for graph navigation and actions"
+        },
+        "csharpDependencyGraph.modernUI.theme.followVSCode": {
+          "order": 16,
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically follow VS Code theme (light/dark) for graph visualization"
         }
       }
     },
@@ -151,6 +281,25 @@
         ]
       }
     ],
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "csharp-dependency-graph",
+          "title": "C# Dependency Graph",
+          "icon": "$(graph-line)"
+        }
+      ]
+    },
+    "views": {
+      "csharp-dependency-graph": [
+        {
+          "id": "csharp-dependency-graph.modernGraphView",
+          "name": "Dependency Graph",
+          "when": "true",
+          "icon": "$(graph)"
+        }
+      ]
+    },
     "menus": {
       "editor/title": [
         {
@@ -165,11 +314,19 @@
       ],
       "explorer/context": [
         {
+          "icon": "$(graph)",
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.open-modern-graph",
+          "group": "7_dependency-graph@0"
+        },
+        {
+          "icon": "$(graph-line)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
           "command": "vscode-csharp-dependency-graph.analyze-cycles",
           "group": "7_dependency-graph@1"
         },
         {
+          "icon": "$(report)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
           "command": "vscode-csharp-dependency-graph.generate-cycle-report",
           "group": "7_dependency-graph@2"
@@ -177,11 +334,19 @@
       ],
       "editor/context": [
         {
+          "icon": "$(graph)",
+          "when": "resourceExtname == .dot || resourceExtname == .gv",
+          "command": "vscode-csharp-dependency-graph.open-modern-graph",
+          "group": "7_dependency-graph@0"
+        },
+        {
+          "icon": "$(graph-line)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
           "command": "vscode-csharp-dependency-graph.analyze-cycles",
           "group": "7_dependency-graph@1"
         },
         {
+          "icon": "$(report)",
           "when": "resourceExtname == .dot || resourceExtname == .gv",
           "command": "vscode-csharp-dependency-graph.generate-cycle-report",
           "group": "7_dependency-graph@2"
@@ -190,6 +355,7 @@
     }
   },
   "scripts": {
+    "validate-vsix": "npm run package:vsix && vsce ls --tree && echo 'VSIX structure validated'",
     "vscode:prepublish": "npm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
@@ -200,43 +366,56 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "rimraf out && tsc -p . --outDir out",
     "test": "node ./out/src/test/runTest.js",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix && eslint \"src/webviewScripts/*.js\" --fix && eslint \"scripts/**/*.ts\" --fix",
+    "prepare": "husky install",
     "lint-and-test": "npm run lint && npm run test",
     "test-compile": "tsc -p . --outDir out",
     "build:dev": "tsc -p . --outDir out",
     "build:prod": "webpack --mode production --devtool hidden-source-map",
-    "check-markdown": "ts-node scripts/markdownSecurityChecker.ts",
-    "build:check-markdown": "node scripts/markdownSecurityChecker.js",
-    "test:check-markdown": "ts-node scripts/markdownSecurityChecker.ts ./test-workspace"
+    "check-markdown": "tsx scripts/markdownSecurityCheckerCli.ts",
+    "build:check-markdown": "node scripts/markdownSecurityCheckerCli.js",
+    "test:check-markdown": "tsx scripts/markdownSecurityCheckerCli.ts ./test-workspace"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
+    "@types/glob": "^9.0.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.10.1",
     "@types/sinon": "^17.0.4",
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.106.0",
     "@types/xml2js": "^0.4.14",
-    "@typescript-eslint/eslint-plugin": "^6.18.1",
-    "@typescript-eslint/parser": "^6.18.1",
-    "@vscode/test-cli": "^0.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
-    "copy-webpack-plugin": "^13.0.0",
-    "eslint": "^8.56.0",
-    "glob": "^11.0.2",
-    "mocha": "^11.2.2",
-    "rimraf": "^6.0.1",
-    "sinon": "^20.0.0",
-    "ts-loader": "^9.5.2",
+    "copy-webpack-plugin": "^13.0.1",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.39.1",
+    "glob": "^11.1.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "mocha": "^11.7.5",
+    "rimraf": "^6.1.0",
+    "sinon": "^21.0.0",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2",
-    "webpack": "^5.98.0",
+    "tslib": "^2.8.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "webpack": "^5.103.0",
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@hpcc-js/wasm": "^2.22.4",
+    "@hpcc-js/wasm": "^2.28.0",
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
-    "minimatch": "^10.0.1",
+    "minimatch": "^10.1.1",
     "xml2js": "^0.6.2"
+  },
+  "lint-staged": {
+    "src/**/*.ts": "eslint --fix",
+    "scripts/**/*.ts": "eslint --fix",
+    "src/webviewScripts/*.js": "eslint --fix"
   }
 }

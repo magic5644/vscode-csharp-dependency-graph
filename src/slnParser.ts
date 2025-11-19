@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as util from 'util';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as util from 'node:util';
 
 const readFile = util.promisify(fs.readFile);
 
@@ -51,7 +51,7 @@ function extractProjectsFromSln(content: string, slnFilePath: string): SlnProjec
     // Only include .csproj files (skip solution folders and other project types)
     if (projectPath.endsWith('.csproj')) {
       // Convert relative path to absolute
-      const absolutePath = path.join(slnDir, projectPath.replace(/\\/g, path.sep));
+      const absolutePath = path.join(slnDir, projectPath.replaceAll('\\', path.sep));
       
       projects.push({
         name: projectName,

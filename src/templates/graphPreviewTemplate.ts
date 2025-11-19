@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as crypto from 'node:crypto';
 
 /**
  * Interface for graph preview template parameters
@@ -16,9 +17,19 @@ export interface GraphPreviewTemplateParams {
 }
 
 /**
+ * Generates a cryptographically secure nonce
+ */
+function generateNonce(): string {
+  return crypto.randomBytes(16).toString('base64');
+}
+
+/**
  * Generates the HTML template for the graph preview
  */
 export function generateHtmlTemplate(params: GraphPreviewTemplateParams): string {
+  // Generate a nonce for inline scripts
+  const nonce = generateNonce();
+  
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -29,17 +40,17 @@ export function generateHtmlTemplate(params: GraphPreviewTemplateParams): string
         params.cspSource
       } data:; script-src ${
         params.cspSource
-      } 'unsafe-inline' 'unsafe-eval'; style-src ${
+      } 'nonce-${nonce}' 'wasm-unsafe-eval'; style-src ${
         params.cspSource
       } 'unsafe-inline'; connect-src ${
         params.cspSource
       }; worker-src blob:; child-src blob:; font-src ${
         params.cspSource
-      }">
+      }; object-src 'none';">
       <title>C# Dependency Graph</title>
-      <script src="${params.d3Uri}"></script>
-      <script src="${params.graphvizUri}"></script>
-      <script src="${params.d3GraphvizUri}"></script>
+      <script nonce="${nonce}" src="${params.d3Uri}"></script>
+      <script nonce="${nonce}" src="${params.graphvizUri}"></script>
+      <script nonce="${nonce}" src="${params.d3GraphvizUri}"></script>
       ${generateStyles()}
     </head>
     <body>
@@ -48,7 +59,7 @@ export function generateHtmlTemplate(params: GraphPreviewTemplateParams): string
         <div class="graph-container"></div>
       </div>
       <div id="status" class="status"></div>
-      ${generateScripts(params)}
+      ${generateScripts(params, nonce)}
     </body>
     </html>
   `;
@@ -201,7 +212,7 @@ function generateToolbar(hasCycles: boolean): string {
       <button id="resetBtn">Reset View</button>
       <button id="exportBtn">Export SVG</button>
       <button id="resetHighlightBtn">Clear Highlight</button>
-      <button id="toggleCyclesBtn" ${!hasCycles ? 'disabled' : ''}>
+      <button id="toggleCyclesBtn" ${hasCycles ? '' : 'disabled'}>
         Show Cycles Only
         ${hasCycles ? `<span class="cycle-badge" id="cycleBadge"></span>` : ''}
       </button>
@@ -225,27 +236,38 @@ function generateToolbar(hasCycles: boolean): string {
 /**
  * Generates the JavaScript for the graph preview
  */
-function generateScripts(params: GraphPreviewTemplateParams): string {
+/**
+ * Generates script tags for the webview
+ */
+function generateScripts(params: GraphPreviewTemplateParams, nonce: string): string {
   return `
-    <script>
-      // State variables
-      window.graphPreviewState = {
-        currentEngine: "dot",
-        highlightMode: false,
-        dotSource: ${JSON.stringify(params.dotContent)},
-        zoomBehavior: null,
-        isShowingCyclesOnly: false,
-        normalDotSource: ${JSON.stringify(params.dotContent)},
-        cyclesOnlyDotSource: ${JSON.stringify(params.cyclesOnlyDotContent || "")},
-        hasCycles: ${params.hasCycles},
-        wasmFolderUri: "${params.wasmFolderUri}"
-      };
+    <script nonce="${nonce}">
+      // Define global URIs for script loading
+      window.d3Uri = '${params.d3Uri}';
+      window.graphvizUri = '${params.graphvizUri}'; 
+      window.d3GraphvizUri = '${params.d3GraphvizUri}';
       
-      // Export script URIs to global scope for dynamic loading
-      window.d3Uri = "${params.d3Uri}";
-      window.graphvizUri = "${params.graphvizUri}";
-      window.d3GraphvizUri = "${params.d3GraphvizUri}";
+      // Define global state (align keys with webview scripts)
+      window.graphPreviewState = {
+        // Primary DOT sources
+        normalDotSource: ${JSON.stringify(params.dotContent)},
+        dotSource: ${JSON.stringify(params.dotContent)},
+        cyclesOnlyDotSource: ${params.cyclesOnlyDotContent ? JSON.stringify(params.cyclesOnlyDotContent) : 'null'},
+        // Flags and runtime state
+        hasCycles: ${params.hasCycles},
+        currentEngine: 'dot',
+        isShowingCyclesOnly: false,
+        // Back-compat fields (some scripts/tests may read these)
+        dotContent: ${JSON.stringify(params.dotContent)},
+        showingCycles: false,
+        // Runtime objects
+        graphviz: null,
+        wasmFolderUri: '${params.wasmFolderUri}'
+      };
     </script>
-    <script src="${params.webviewScriptUri}"></script>
+    <script nonce="${nonce}" src="${params.d3Uri}"></script>
+    <script nonce="${nonce}" src="${params.graphvizUri}"></script>
+    <script nonce="${nonce}" src="${params.d3GraphvizUri}"></script>
+    <script nonce="${nonce}" src="${params.webviewScriptUri}"></script>
   `;
 }

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as path from "path";
-import * as fs from "fs";
+import * as path from "node:path";
+import * as fs from "node:fs";
 import {
   generateHtmlTemplate,
   GraphPreviewTemplateParams,
@@ -42,7 +42,6 @@ export class GraphPreviewProvider {
   private _panel: vscode.WebviewPanel | undefined;
   private readonly _extensionUri: vscode.Uri;
   private _sourceFilePath: string | undefined;
-  private _dotContent: string = "";
   private _cyclesOnlyDotContent: string | undefined;
   private _hasCycles: boolean = false;
 
@@ -64,7 +63,6 @@ export class GraphPreviewProvider {
     cyclesOnlyDotContent?: string
   ): void {
     this._sourceFilePath = sourceFilePath;
-    this._dotContent = dotContent;
     this._cyclesOnlyDotContent = cyclesOnlyDotContent;
     this._hasCycles = !!cyclesOnlyDotContent; // If there is content for cycles-only, then there are cycles
 
@@ -79,7 +77,7 @@ export class GraphPreviewProvider {
    * Handle scenario where panel already exists
    */
   private _handleExistingPanel(title: string, dotContent: string): void {
-    if (!this._panel) return;
+    if (!this._panel) {return;}
 
     this._panel.reveal();
     this._panel.title = title;
@@ -144,10 +142,9 @@ export class GraphPreviewProvider {
     message: WebviewMessageType
   ): Promise<void> {
     if (message.command === "error") {
-      const errorMsg = message as ErrorMessage;
-      vscode.window.showErrorMessage(errorMsg.text);
+      vscode.window.showErrorMessage(message.text);
     } else if (message.command === "exportSvg") {
-      await this._handleExportSvg(message as ExportSvgMessage);
+      await this._handleExportSvg(message);
     }
   }
 
@@ -257,7 +254,7 @@ export class GraphPreviewProvider {
         vscode.Uri.joinPath(distResourcesPath, "graphviz.umd.js")
       );
       wasmFolderUri = this._panel.webview.asWebviewUri(distResourcesPath);
-    } catch (error) {
+    } catch {
       // Fallback to development resources
       console.log("Falling back to development resources in resources/js");
       d3Uri = this._panel.webview.asWebviewUri(
@@ -347,7 +344,7 @@ export class GraphPreviewProvider {
           foundDevResources++;
           console.log(`✅ Development: ${path.fsPath} exists`);
         }
-      } catch (error) {
+      } catch {
         if (i < 4) {
           console.log(`❌ Production: ${path.fsPath} does not exist`);
         } else {

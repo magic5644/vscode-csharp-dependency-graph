@@ -22,12 +22,15 @@ export async function findCSharpSourceFiles(
       const projectDir = path.dirname(projectPath);
       const projectName = path.basename(projectPath, '.csproj');
       
+      // Check if project directory exists
+      if (!fs.existsSync(projectDir)) {
+        continue; // Skip non-existent directories
+      }
+      
       await searchDirectory(projectDir, sourceFiles, excludePatterns);
       
-      // Do not add the project if there are no source files
-      if (sourceFiles.length > 0) {
-        projectSourceFiles.set(projectName, sourceFiles);
-      }
+      // Always add the project to the map, even if no source files are found
+      projectSourceFiles.set(projectName, sourceFiles);
     } catch (err) {
       console.error(`Error analyzing project ${projectPath}:`, err);
     }
@@ -57,8 +60,8 @@ async function searchDirectory(
         if (!isExcluded(fullPath, excludePatterns)) {
           await searchDirectory(fullPath, results, excludePatterns);
         }
-      } else if (entry.isFile() && entry.name.endsWith('.cs')) {
-        // Add the .cs file if it is not excluded
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.cs')) {
+        // Add the .cs file if it is not excluded (case-insensitive check)
         if (!isExcluded(fullPath, excludePatterns)) {
           results.push(fullPath);
         }

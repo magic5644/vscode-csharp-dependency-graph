@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as util from 'util';
+import * as fs from 'node:fs';
+import * as util from 'node:util';
 
 const readFile = util.promisify(fs.readFile);
 
@@ -142,7 +142,7 @@ function processClassLine(
   // Extract the class name - Limit the class name length
   const classNameRegex = /\bclass\s+(\w{1,60})/;
   const classNameMatch = classNameRegex.exec(line);
-  if (!classNameMatch) return null;
+  if (!classNameMatch) {return null;}
   
   const className = classNameMatch[1];
   const dependencies: DependencyInfo[] = [];
@@ -152,11 +152,11 @@ function processClassLine(
   
   // Find the index of the beginning of the class
   const classIndex = content.indexOf(line);
-  if (classIndex < 0) return null;
+  if (classIndex < 0) {return null;}
   
   // Extract the class body
   const classContent = getClassBody(content, classIndex);
-  if (!classContent) return null;
+  if (!classContent) {return null;}
   
   // Extract dependencies from class content
   extractDependenciesFromClassContent(classContent, dependencies);
@@ -331,12 +331,15 @@ function resolveWithImports(
  * Extract inheritance dependencies from a class declaration line
  */
 function extractInheritanceDependencies(line: string, dependencies: DependencyInfo[]): void {
-  // Using atomic groups and possessive quantifiers to prevent backtracking
-  const inheritanceRegex = /\s*:\s*((?:[\w<>.]+(?:\s*,\s*[\w<>.]+)*))(?=\s*\{|$)/;
-  const inheritanceMatch = inheritanceRegex.exec(line);
-  if (!inheritanceMatch) return;
+  // Use simple character class to prevent ReDoS
+  const colonIndex = line.indexOf(':');
+  if (colonIndex === -1) {return;}
   
-  const inheritanceStr = inheritanceMatch[1];
+  const braceIndex = line.indexOf('{', colonIndex);
+  const endIndex = braceIndex === -1 ? line.length : braceIndex;
+  const inheritanceStr = line.substring(colonIndex + 1, endIndex).trim();
+  
+  if (!inheritanceStr) {return;}
   // Handle commas in generic arguments properly
   const parts = splitByTopLevelCommas(inheritanceStr);
   
@@ -399,14 +402,14 @@ function extractDependenciesFromClassContent(
  * Finds instantiations with 'new'
  */
 function findNewInstantiations(content: string, dependencies: DependencyInfo[]) {
-  // Improved regex to handle generic types
-  const newRegex = /new\s+([\w.<>,\s]+?)[({}]/g;
+  // Simplified regex to prevent ReDoS - match type name after 'new'
+  const newRegex = /new\s+([\w.<>,]+?)\s*[({}]/g;
   let match;
   
   while ((match = newRegex.exec(content)) !== null) {
     if (match[1]) {
       const type = match[1].trim();
-      if (!isPrimitiveType(type)) {
+      if (!isPrimitiveType(type) && !isSystemClass(type)) {
         dependencies.push({
           className: type,
           namespace: 'unknown',
@@ -422,13 +425,14 @@ function findNewInstantiations(content: string, dependencies: DependencyInfo[]) 
  */
 function findStaticCalls(content: string, dependencies: DependencyInfo[]) {
   // Improved regex for static calls
-  const staticRegex = /([\w.]+)\.\w+\(/g;
+  const staticRegex = /\b([A-Z][\w.]*)\.\w+\(/g;
   let match;
   
   while ((match = staticRegex.exec(content)) !== null) {
     const className = match[1];
-    if (!isPrimitiveType(className) && 
-        !['this', 'base', 'var', 'string', 'int', 'Console'].includes(className)) {
+    if (!isPrimitiveType(className) &&
+        !isSystemClass(className) &&
+        !['this', 'base', 'var', 'string', 'int'].includes(className)) {
       dependencies.push({
         className: className,
         namespace: 'unknown',
@@ -447,7 +451,7 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
   
   for (const line of lines) {
     // Skip comments
-    if (line.trim().startsWith('//')) continue;
+    if (line.trim().startsWith('//')) {continue;}
     
     processVariableDeclaration(line, dependencies);
     processMethodSignature(line, dependencies);
@@ -458,16 +462,19 @@ function findAllTypes(content: string, dependencies: DependencyInfo[]): void {
  * Process variable and field declarations in a line
  */
 function processVariableDeclaration(line: string, dependencies: DependencyInfo[]): void {
-  // Limit the size of types to avoid exponential backtracking
-  const declarationRegex = /^\s*(public|private|protected|internal|const|readonly|static)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*[=;{(]/;
-  const declMatch = declarationRegex.exec(line);
+  // Use fixed repetition to prevent ReDoS
+  const fieldRegex = /^\s*(?:\w+\s+){0,3}([\w<>[\],.]+)\s+\w+\s*[=;]/;
+  const propertyRegex = /^\s*(?:\w+\s+){0,3}([\w<>[\],.]+)\s+\w+\s*\{/;
   
-  if (!declMatch?.[2]) {
+  let declMatch = fieldRegex.exec(line);
+  declMatch ??= propertyRegex.exec(line);
+  
+  if (!declMatch?.[1]) {
     return;
   }
   
-  const type = declMatch[2].trim();
-  if (!isPrimitiveType(type)) {
+  const type = declMatch[1].trim();
+  if (!isPrimitiveType(type) && !isSystemClass(type)) {
     dependencies.push({
       className: type,
       namespace: 'unknown',
@@ -480,8 +487,8 @@ function processVariableDeclaration(line: string, dependencies: DependencyInfo[]
  * Process method signatures to extract return type and parameters
  */
 function processMethodSignature(line: string, dependencies: DependencyInfo[]): void {
-  // Limit the size of return types to avoid exponential backtracking
-  const methodRegex = /(public|private|protected|internal|static|virtual|override|abstract)?\s*([\w<>[\],\s.]{1,100})\s+\w+\s*\(([^)]{0,1000})\)/;
+  // Use fixed repetition to prevent ReDoS
+  const methodRegex = /\b(?:public|private|protected|internal)\s+(?:\w+\s+){0,2}([\w<>[\],.]+)\s+(\w+)\s*\(([^)]*)\)/;
   
   const methodMatch = methodRegex.exec(line);
   
@@ -489,7 +496,7 @@ function processMethodSignature(line: string, dependencies: DependencyInfo[]): v
     return;
   }
   
-  processReturnType(methodMatch[2], dependencies);
+  processReturnType(methodMatch[1], dependencies);
   processParameters(methodMatch[3], dependencies);
 }
 
@@ -499,11 +506,11 @@ function processMethodSignature(line: string, dependencies: DependencyInfo[]): v
 function processReturnType(returnType: string, dependencies: DependencyInfo[]): void {
   const trimmedType = returnType.trim();
   
-  if (trimmedType !== 'void' && !isPrimitiveType(trimmedType)) {
-    dependencies.push({ 
-      className: trimmedType, 
-      namespace: 'unknown', 
-      projectName: 'external' 
+  if (trimmedType !== 'void' && !isPrimitiveType(trimmedType) && !isSystemClass(trimmedType)) {
+    dependencies.push({
+      className: trimmedType,
+      namespace: 'unknown',
+      projectName: 'external'
     });
   }
 }
@@ -535,10 +542,10 @@ function addParameterTypeDependency(param: string, dependencies: DependencyInfo[
   
   const paramType = paramParts[0].trim();
   
-  if (!isPrimitiveType(paramType)) {
+  if (!isPrimitiveType(paramType) && !isSystemClass(paramType)) {
     dependencies.push({
-      className: paramType, 
-      namespace: 'unknown', 
+      className: paramType,
+      namespace: 'unknown',
       projectName: 'external'
     });
   }
@@ -579,7 +586,7 @@ function getClassBody(content: string, startIndex: number): string | null {
     }
   }
   
-  if (startPos === -1) return null;
+  if (startPos === -1) {return null;}
   
   // Then find the matching closing brace
   for (let i = startPos + 1; i < content.length; i++) {
@@ -604,7 +611,7 @@ function isPrimitiveType(type: string): boolean {
   const primitiveTypes = [
     'int', 'string', 'bool', 'float', 'double', 'decimal', 'char',
     'byte', 'sbyte', 'short', 'ushort', 'uint', 'long', 'ulong',
-    'object', 'dynamic', 'var', 'void', 'this', 'base', 'DateTime',
+    'object', 'dynamic', 'var', 'void', 'this', 'base', 'DateTime', 'return',
     'Guid', 'TimeSpan', 'Task', 'List', 'Dictionary', 'IEnumerable',
     'IList', 'IDictionary', 'ICollection'
   ];
@@ -616,4 +623,17 @@ function isPrimitiveType(type: string): boolean {
          baseType.startsWith("Action") ||
          baseType.startsWith("Func") ||
          baseType.startsWith("System.");
+}
+
+/**
+ * Checks if a type is a system class that should not be considered a dependency
+ */
+function isSystemClass(type: string): boolean {
+  const systemClasses = [
+    'Console', 'Math', 'Environment', 'Thread', 'File', 'Directory',
+    'Path', 'Convert', 'Enum', 'Array', 'String', 'Exception'
+  ];
+  
+  const baseType = type.split('<')[0].trim();
+  return systemClasses.includes(baseType) || baseType.startsWith('System.');
 }

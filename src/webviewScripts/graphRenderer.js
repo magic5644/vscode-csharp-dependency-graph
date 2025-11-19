@@ -40,6 +40,11 @@ export function showStatus(message) {
  */
 export function initializeGraphviz() {
   try {
+    // Verify the graph container exists
+    if (!graphContainer) {
+      throw new Error("Graph container element not found");
+    }
+    
     // Create graphviz instance with simpler initialization to prevent errors
     state.graphviz = d3.select(graphContainer)
       .graphviz()

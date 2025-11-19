@@ -17,7 +17,7 @@ interface ExportSvgTestMessage {
  */
 interface MockWebview {
   html: string;
-  asWebviewUri: (uri: vscode.Uri) => vscode.Uri;
+  asWebviewUri: (_uri: vscode.Uri) => vscode.Uri;
   cspSource: string;
   onDidReceiveMessage: sinon.SinonStub;
   postMessage: sinon.SinonStub;
@@ -125,9 +125,9 @@ suite('GraphPreviewProvider Test Suite', () => {
     // Use type assertion to access private fields
     const providerAny = provider as unknown as {
       _panel: vscode.WebviewPanel;
-      _handleWebviewMessage(message: ExportSvgTestMessage): Promise<void>;
-      _handleExportSvg(message: ExportSvgTestMessage): Promise<void>;
-      _getDefaultExportUri(title?: string): vscode.Uri;
+      _handleWebviewMessage(_message: ExportSvgTestMessage): Promise<void>;
+      _handleExportSvg(_message: ExportSvgTestMessage): Promise<void>;
+      _getDefaultExportUri(_title?: string): vscode.Uri;
     };
     
     // Set the panel
@@ -206,7 +206,7 @@ suite('GraphPreviewProvider Test Suite', () => {
     // Use type assertion to access private fields
     const providerAny = provider as unknown as {
       _panel: vscode.WebviewPanel;
-      _handleWebviewMessage(message: ExportSvgTestMessage): Promise<void>;
+      _handleWebviewMessage(_message: ExportSvgTestMessage): Promise<void>;
     };
     
     // Set the panel

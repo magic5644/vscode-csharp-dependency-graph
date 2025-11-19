@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as util from 'util';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as util from 'node:util';
 import * as xml2js from 'xml2js';
 
 const readFile = util.promisify(fs.readFile);
@@ -89,22 +89,39 @@ export async function parseCsprojFiles(filePaths: string[]): Promise<Project[]> 
 }
 
 function extractTargetFramework(result: CsprojXml, targetFramework: string): string {
-  if (result.Project.PropertyGroup && Array.isArray(result.Project.PropertyGroup)) {
-    for (const group of result.Project.PropertyGroup) {
-      if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
-        targetFramework = String(group.TargetFramework[0]);
-        break;
-      } else if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
-        // Use first of multiple target frameworks
-        const frameworks = String(group.TargetFrameworks[0]).split(';');
-        if (frameworks.length > 0) {
-          targetFramework = frameworks[0];
-        }
-        break;
-      }
+  const propertyGroups = result.Project.PropertyGroup;
+  if (!propertyGroups || !Array.isArray(propertyGroups)) {
+    return 'unknown';
+  }
+
+  for (const group of propertyGroups) {
+    const framework = extractFrameworkFromGroup(group);
+    if (framework) {
+      return framework;
     }
   }
-  return targetFramework;
+  
+  return targetFramework || 'unknown';
+}
+
+function extractFrameworkFromGroup(group: PropertyGroup): string | null {
+  // Check for modern TargetFramework
+  if (group.TargetFramework && Array.isArray(group.TargetFramework) && group.TargetFramework.length > 0) {
+    return String(group.TargetFramework[0]);
+  }
+  
+  // Check for multi-target TargetFrameworks
+  if (group.TargetFrameworks && Array.isArray(group.TargetFrameworks) && group.TargetFrameworks.length > 0) {
+    const frameworks = String(group.TargetFrameworks[0]).split(';');
+    return frameworks.length > 0 ? frameworks[0] : null;
+  }
+  
+  // Check for legacy TargetFrameworkVersion
+  if (group.TargetFrameworkVersion && Array.isArray(group.TargetFrameworkVersion) && group.TargetFrameworkVersion.length > 0) {
+    return String(group.TargetFrameworkVersion[0]);
+  }
+  
+  return null;
 }
 
 function extractProjectReferences(result: CsprojXml, dependencies: string[], packageDependencies: PackageReference[]): void {
@@ -131,7 +148,7 @@ function addProjectReferencesFromGroup(group: ItemGroup, dependencies: string[])
     const includePath = reference?.$.Include;
     if (includePath) {
       // Convert string and replace backslashes with forward slashes
-      const normalizedPath = String(includePath).replace(/\\/g, '/');
+      const normalizedPath = String(includePath).replaceAll('\\', '/');
       
       // Extract the last part of the path (the filename with extension)
       const lastPathPart = normalizedPath.split('/').pop() ?? '';
@@ -152,7 +169,7 @@ function addPackageReferencesFromGroup(group: ItemGroup, packageDependencies: Pa
 
   for (const reference of packageRefs) {
     const packageName = reference?.$.Include;
-    const packageVersion = reference?.$.Version || 'unknown';
+    const packageVersion = reference?.$.Version || '';
     
     if (packageName) {
       packageDependencies.push({

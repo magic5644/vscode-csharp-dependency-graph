@@ -42,10 +42,10 @@ export function isValidDotGraph(content: string): boolean {
  * @returns Sanitized string
  */
 export function sanitizeStringValue(value: string): string {
-  if (!value) return value;
+  if (!value) {return value;}
   
   // Process quotes first to avoid regex issues
-  let result = value.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  let result = value.replaceAll("'", '&#39;').replaceAll('"', '&quot;');
   
   // Then process other special characters
   for (const [char, entity] of Object.entries(SPECIAL_CHAR_MAP)) {
@@ -68,7 +68,7 @@ export function sanitizeStringValue(value: string): string {
  * @returns Sanitized DOT graph content
  */
 export function sanitizeNodeIds(content: string): string {
-  return content.replace(
+  return content.replaceAll(
     /"([^"]*?)"/g,
     (_match, nodeId) => {
       const sanitized = sanitizeStringValue(nodeId);
@@ -85,10 +85,10 @@ export function sanitizeNodeIds(content: string): string {
  */
 export function fixSyntaxIssues(content: string): string {
   // Ensure adequate spacing in edge definitions
-  content = content.replace(/->(\S)/g, '-> $1');
+  content = content.replaceAll(/->(\S)/g, '-> $1');
   
   // Fix graph identifiers with spaces
-  content = content.replace(
+  content = content.replaceAll(
     /(di)?graph\s+(\w+\s+\w+)(\s*{)/gi, 
     (_match, di, name, bracket) => `${di ?? ''}graph "${name}"${bracket}`
   );

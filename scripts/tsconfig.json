@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es2019",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": true,
     "sourceMap": true,
-    "outDir": "."
+    "outDir": ".",
+    "skipLibCheck": true
   },
   "include": [
     "*.ts"

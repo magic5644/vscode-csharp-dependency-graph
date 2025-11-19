@@ -163,12 +163,9 @@ function setupEventListeners() {
   });
 }
 
-// Start loading dependencies when the window loads
-window.addEventListener('load', loadDependencies);
-
 // Ensure DOM is ready before initialization
 document.addEventListener("DOMContentLoaded", () => {
-  // We'll wait for dependencies to load before initializing
-  // This handler is just a safeguard
   console.log('DOM content loaded');
+  // Start loading dependencies when DOM is ready
+  loadDependencies();
 });
