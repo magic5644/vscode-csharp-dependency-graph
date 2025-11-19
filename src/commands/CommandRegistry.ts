@@ -5,10 +5,10 @@ import { NotificationManager } from "../notifications/NotificationManager";
 
 export class CommandRegistry {
   constructor(
-    private context: vscode.ExtensionContext,
-    private graphController: GraphController,
-    private modernGraphProvider: ModernGraphWebviewProvider,
-    private notificationManager: NotificationManager
+    private readonly context: vscode.ExtensionContext,
+    private readonly graphController: GraphController,
+    private readonly modernGraphProvider: ModernGraphWebviewProvider,
+    private readonly notificationManager: NotificationManager
   ) {}
 
   public async registerCommands(): Promise<void> {
@@ -155,9 +155,9 @@ export class CommandRegistry {
   /**
    * Safely registers a VS Code command with error handling for duplicate registrations
    */
-  private async safeRegisterCommand(
+  private async safeRegisterCommand<A extends unknown[]>(
     commandId: string,
-    handler: (...args: any[]) => any
+    handler: (...args: A) => unknown
   ): Promise<vscode.Disposable | null> {
     try {
       // Check if command already exists
